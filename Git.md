@@ -394,6 +394,275 @@ git push origin main
 
 
 
+# 六、使用
+
+## 1. 分支管理
+
+### 1.1 查看本地分支
+
+查看当前仓库的所有本地分支：
+
+```bash
+git branch
+```
+
+输出示例：
+
+```
+* main
+  develop
+  feature/new-feature
+  fix/bugfix
+```
+
+- `*` 表示当前所在的分支。
+
+
+
+### 1.2 创建新分支
+
+创建一个新的本地分支：
+
+```bash
+git branch <分支名称>
+```
+
+例如，创建一个名为 `feature/new-feature` 的分支：
+
+```bash
+git branch feature/new-feature
+```
+
+或者，创建并切换到新分支：
+
+```bash
+git checkout -b <分支名称>
+```
+
+例如：
+
+```bash
+git checkout -b feature/new-feature
+```
+
+
+
+### 1.3 切换分支
+
+切换到已存在的分支：
+
+```bash
+git checkout <分支名称>
+```
+
+例如，切换到 `develop` 分支：
+
+```bash
+git checkout develop
+```
+
+
+
+### 1.4 删除本地分支
+
+删除本地分支：
+
+```bash
+git branch -d <分支名称>
+```
+
+例如，删除 `feature/new-feature` 分支：
+
+```bash
+git branch -d feature/new-feature
+```
+
+- 如果分支尚未合并到当前分支，Git 会阻止删除。你可以使用 `-D` 强制删除：
+
+  ```bash
+  git branch -D feature/new-feature
+  ```
+
+  
+
+### 1.5 重命名本地分支
+
+重命名当前分支：
+
+```bash
+git branch -m <新分支名称>
+```
+
+例如，将当前分支重命名为 `feature/new-feature`：
+
+```bash
+git branch -m feature/new-feature
+```
+
+重命名其他分支：
+
+```bash
+git branch -m <旧分支名称> <新分支名称>
+```
+
+例如，将 `feature/old-feature` 重命名为 `feature/new-feature`：
+
+```bash
+git branch -m feature/old-feature feature/new-feature
+```
+
+
+
+### 1.6 查看分支状态
+
+查看当前分支的状态：
+
+```bash
+git status
+```
+
+输出示例：
+
+```
+On branch main
+Your branch is up to date with 'origin/main'.
+
+nothing to commit, working tree clean
+```
+
+
+
+### 1.7 查看分支提交历史
+
+查看当前分支的提交历史：
+
+```bash
+git log
+```
+
+或者，查看特定分支的提交历史：
+
+```bash
+git log <分支名称>
+```
+
+
+
+### 1.8 合并分支
+
+将一个分支的更改合并到当前分支：
+
+```bash
+git merge <分支名称>
+```
+
+例如，将 `feature/new-feature` 分支的更改合并到当前分支：
+
+```bash
+git merge feature/new-feature
+```
+
+
+
+### 1.9 拉取远程分支
+
+从远程仓库拉取最新的分支信息：
+
+```bash
+git fetch
+```
+
+查看远程分支：
+
+```bash
+git branch -r
+```
+
+输出示例：
+
+```
+  origin/main
+  origin/develop
+  origin/feature/new-feature
+```
+
+拉取远程分支并创建本地分支：
+
+```bash
+git checkout -b <本地分支名称> <远程分支名称>
+```
+
+例如，拉取远程的 `feature/new-feature` 分支并创建本地分支：
+
+```bash
+git checkout -b feature/new-feature origin/feature/new-feature
+```
+
+
+
+### 1.10 推送本地分支
+
+将本地分支推送到远程仓库：
+
+```bash
+git push -u origin <分支名称>
+```
+
+例如，将 `feature/new-feature` 分支推送到远程仓库：
+
+```bash
+git push -u origin feature/new-feature
+```
+
+
+
+### 1.11 查看分支差异
+
+查看当前分支与另一个分支的差异：
+
+```bash
+git diff <分支名称>
+```
+
+例如，查看当前分支与 `main` 分支的差异：
+
+```bash
+git diff main
+```
+
+
+
+### 1.12 查看分支的上游分支
+
+查看当前分支的上游分支：
+
+```bash
+git branch -vv
+```
+
+输出示例：
+
+```
+* main 1234567 [origin/main] Add new feature
+  develop 7890abc [origin/develop] Fix bug
+```
+
+
+
+### 1.13 设置分支的上游分支
+
+设置当前分支的上游分支：
+
+```bash
+git branch -u origin/<远程分支名称>
+```
+
+例如，设置当前分支的上游分支为 `origin/main`：
+
+```bash
+git branch -u origin/main
+```
+
 
 
 
