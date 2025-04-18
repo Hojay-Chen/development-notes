@@ -1,6 +1,59 @@
 # 目录
+- [目录](#目录)
+- [一、Java容器](#一java容器)
+- [二、Java并发编程](#二java并发编程)
+  - [1. 线程运行状态](#1-线程运行状态)
+    - [1.1 线程运行状态介绍](#11-线程运行状态介绍)
+      - [1.1.1 NEW](#111-new)
+      - [1.1.2 RUNNABLE](#112-runnable)
+      - [1.1.3 BLOCKED](#113-blocked)
+      - [1.1.4 WAITING](#114-waiting)
+      - [1.1.5 TIMED\_WAITING](#115-timed_waiting)
+      - [1.1.6 TERMINATED](#116-terminated)
+    - [1.2 线程运行状态变化](#12-线程运行状态变化)
+      - [1.2.1 NEW-\>RUNNABLE](#121-new-runnable)
+      - [1.2.2 RUNNABLE-\>BLOCK](#122-runnable-block)
+      - [1.2.3 BLOCK -\> RUNNABLE](#123-block---runnable)
+      - [1.2.4 RUNNABLE -\> WATING](#124-runnable---wating)
+      - [1.2.5 WAITING -\> RUNNABLE](#125-waiting---runnable)
+      - [1.2.6 RUNNABLE -\> TIMED\_WAITING](#126-runnable---timed_waiting)
+      - [1.2.7 TIMED\_WAITING -\> RUNNABLE](#127-timed_waiting---runnable)
+      - [1.2.8 RUNNABLE -\> RUNNABLE](#128-runnable---runnable)
+      - [1.2.9 RUNNABLE -\> TERMINATED](#129-runnable---terminated)
+  - [2. 创建线程的方式](#2-创建线程的方式)
+    - [2.1 继承Thread类](#21-继承thread类)
+    - [2.2 实现Runnable接口](#22-实现runnable接口)
+    - [2.3 实现Callable接口](#23-实现callable接口)
+  - [3. 线程组](#3-线程组)
+  - [4. Java内存模型](#4-java内存模型)
+    - [4.1 并发编程特性](#41-并发编程特性)
+    - [4.2 Java并发问题产生原因](#42-java并发问题产生原因)
+      - [4.2.1 多线程并发内存结构](#421-多线程并发内存结构)
+      - [4.2.2 重排序](#422-重排序)
+    - [4.3 JMM规则](#43-jmm规则)
+      - [4.3.1 八种同步操作](#431-八种同步操作)
+      - [4.3.2 happens-before规则](#432-happens-before规则)
+      - [4.3.3 内存屏障](#433-内存屏障)
+  - [5. Java并发算法](#5-java并发算法)
+    - [5.1 CAS](#51-cas)
+    - [5.2 AQS](#52-aqs)
+  - [5. Java并发工具介绍](#5-java并发工具介绍)
+    - [5.1 volatile](#51-volatile)
+      - [5.1.1底层原理](#511底层原理)
+      - [5.1.2 使用教程](#512-使用教程)
+      - [5.1.3 实战场景](#513-实战场景)
+    - [5.2 synchronized](#52-synchronized)
+    - [5.3 ReentrantLock](#53-reentrantlock)
+    - [5.4 ReentrantReadWriteLock](#54-reentrantreadwritelock)
+- [三、JVM](#三jvm)
+  - [1. JVM内存结构](#1-jvm内存结构)
+    - [1.1 程序计数器](#11-程序计数器)
+    - [1.2 虚拟机栈](#12-虚拟机栈)
+    - [1.3 本地方法栈](#13-本地方法栈)
+    - [1.4 堆内存](#14-堆内存)
+    - [1.5 方法区](#15-方法区)
+    - [1.6 元空间](#16-元空间)
 
-[TOC]
 
 # 一、Java容器
 
@@ -590,7 +643,7 @@ Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环
 
 ## 5. Java并发工具介绍
 
-**Java 的锁都是基于对象的**，而一个对象的“锁”存放在对象内存空间的对象头的mark word部分，详细可见。
+**Java 的锁都是基于对象的**，而一个对象的“锁”存放在对象内存空间的对象头的mark word部分，详细可见[1.2.9 RUNNABLE -\> TERMINATED](#129-runnable---terminated)。
 
 ### 5.1 volatile
 
@@ -879,15 +932,21 @@ public static Penguin getInstance() {
 
 ​	程序计数器用来存放当前线程接下来将要执行的字节码指令、分支、循环、跳转、异常处理等信息。在任何时候CPU只执行其中一个线程中的指令，为了能够在多线程并发执行发生进程切换时能够回到线程正确的执行位置，每个线程都需要有一个程序计数器，并且各程序计数器之间互不影响，因此程序计数器为线程私有的。
 
+
+
 ### 1.2 虚拟机栈
 
 ​	虚拟机栈是线程私有，它的生命周期与线程相同，是在JVM运行时所创建，在线程中，方法在执行的时候都会创建一个名为栈帧的数据结构，主要用于存放局部变量表、操作栈、动态链接、方法出口等信息，如下图所示，方法的调用对应着栈帧在虚拟机栈中的压栈和弹栈过程。
 
 ![jvm_csanio](.\images\jvm_csanio.jpg)
 
+
+
 ### 1.3 本地方法栈
 
 ​	本地方法栈是线程私有的，Java中提供了调用本地方法的接口（Java Native Interface），也就是C/C++程序，在线程的执行过程中，经常会碰到调用JNI方法的情况，JVM为本地方法所划分的内存区域便是本地方法栈。
+
+
 
 ### 1.4 堆内存
 
@@ -897,6 +956,8 @@ public static Penguin getInstance() {
 
 ![jvm_snckas](.\images\jvm_snckas.webp)
 
+
+
 ### 1.5 方法区
 
 ​	方法区又叫持久代，被所有线程共享，主要用于存储已经被虚拟机加载的类信息、常量、静态变量、即时编译器（JIT）编译后的代码等数据。方法区在JVM启动时被创建，大小固定，因此容易出现方法区内存分配不足而内存溢出。
@@ -905,9 +966,15 @@ public static Penguin getInstance() {
 
 ​	在HotSpot JVM中，方法区被细分为持久代和代码缓存区，代码缓存区主要用于存储编译后的本地代码以及JIT编译器生成的代码。
 
+
+
 ### 1.6 元空间
 
 ​	元空间（Meta Space）自JDK1.8版本之后取代了方法区，元空间同样是堆内存的一部分，相比较于方法区，元空间存在于本地内存而不是虚拟机内部，并且元空间的大小是动态的，因此不容易出现内存溢出的情况。
+
+
+
+### 1.7 对象内存结构
 
 
 
