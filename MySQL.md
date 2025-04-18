@@ -6,7 +6,7 @@
 
 MySQL的逻辑架构总体分为两层，分别为Server层和引擎层，如下图所示：
 
-![mysql_architecture_opanfk](C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\mysql_architecture_opanfk.jpg)
+![mysql_architecture_opanfk](.\images\mysql_architecture_opanfk.jpg)
 
 **Server层：**主要包括**连接器**、**查询缓存**、**分析器**、**优化器**、**执行器**等，可以说此层涵盖了MySQL的**大多数核心服务功能**，以及**所有的内置函数**（如日期、时间、数学和加密函数等），**所有跨存储引擎的功能**都在这一层实现，比如存储过程、触发器、视图等。
 
@@ -69,7 +69,7 @@ query_cache_type有3个值：
 **语法分析**：根据词法分析的结果，语法分析器（比如：Bison）会根据语法规则，判断你输入的这个 SQL 语句是否 满足 MySQL 语法 。
 如果SQL语句正确，则会生成一个这样的语法树：
 
-![mysql_architecture_xsnao](C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\mysql_architecture_xsnao.png)
+![mysql_architecture_xsnao](.\images\mysql_architecture_xsnao.png)
 
 ### 1.5 优化器
 
@@ -427,7 +427,7 @@ systemctl restart mysqld.service
 
 B+树中，每一个记录（包括数据记录和目录项记录）结构如下：
 
-![mysql_btree_xapnf](C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\mysql_btree_xapnf.png)
+![mysql_btree_xapnf](.\images\mysql_btree_xapnf.png)
 
 
 我们只在示意图里展示记录的这几个部分:
@@ -439,11 +439,11 @@ B+树中，每一个记录（包括数据记录和目录项记录）结构如下
 
 将记录格式示意图的其他信息项暂时去掉并把它竖起来的效果就是这样：
 
-<img src="C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\mysql_btree_cnsla.png" alt="mysql_btree_cnsla" style="zoom:80%;" />
+<img src=".\images\mysql_btree_cnsla.png" alt="mysql_btree_cnsla" style="zoom:80%;" />
 
 把一些记录放到页里的示意图就是：
 
-<img src="C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\mysql_btree_csanklv.png" alt="mysql_btree_csanklv" style="zoom: 50%;" />
+<img src=".\images\mysql_btree_csanklv.png" alt="mysql_btree_csanklv" style="zoom: 50%;" />
 
 **①一个简单的索引设计方案**
 我们在根据某个搜索条件查找一些记录时为什么要遍历所有的数据页呢？因为各个页中的记录并没有规律，我们并不知道我们的搜索条件匹配哪些页中的记录，所以不得不依次遍历所有的数据页。所以如果我们想快速的定位到需要查找的记录在哪些数据页中该咋办？我们可以为快速定位记录所在的数据页而建立一个目录 ，建这个目录必须完成下边这些事：
@@ -454,7 +454,7 @@ B+树中，每一个记录（包括数据记录和目录项记录）结构如下
 
 所以我们为上边几个页做好的目录就像这样子：
 
-![mysql_btree_ndslvd](C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\mysql_btree_ndslvd.png)
+![mysql_btree_ndslvd](.\images\mysql_btree_ndslvd.png)
 
 以 页28 为例，它对应 目录项2 ，这个目录项中包含着该页的页号 28 以及该页中数据项记录的最小主键值 5 。我们只需要把几个目录项在物理存储器上连续存储（比如：数组），就可以实现根据主键值快速查找某条记录的功能了。比如：查找主键值为 20 的记录，具体查找过程分两步：
 
@@ -469,7 +469,7 @@ B+树中，每一个记录（包括数据记录和目录项记录）结构如下
 
 我们把前边使用到的目录项放到数据页中的样子就是这样：
 
-![mysql_btree_knclads](C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\mysql_btree_knclads.png)
+![mysql_btree_knclads](.\images\mysql_btree_knclads.png)
 
 
 从图中可以看出来，我们新分配了一个编号为30的页来专门存储目录项记录。这里再次强调 目录项记录和普通的 数据项记录 的不同点：
@@ -494,7 +494,7 @@ B+树中，每一个记录（包括数据记录和目录项记录）结构如下
 
 ​	这里我们假设一个存储目录项记录的页最多只能存放4条目录项记录，所以如果此时我们再向上图中插入一条主键值为320的数据项记录的话，那就需要分配一个新的存储目录项记录的页:
 
-![mysql_btree_mkldvnc](C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\mysql_btree_mkldvnc.png)
+![mysql_btree_mkldvnc](.\images\mysql_btree_mkldvnc.png)
 
 
 ​	从图中可以看出，我们插入了一条主键值为320的数据项记录之后需要两个新的数据页：
@@ -517,13 +517,13 @@ B+树中，每一个记录（包括数据记录和目录项记录）结构如下
 
 ​	问题来了，在这个查询步骤的第1步中我们需要定位存储目录项记录的页，但是这些页是不连续的，如果我们表中的数据非常多则会产生很多存储目录项记录的页，那我们怎么根据主键值快速定位一个存储目录项记录的页呢?那就为这些存储目录项记录的页再生成一个更高级的目录，就像是一个多级目录一样，大目录里嵌套小目录，小目录里才是实际的数据，所以现在各个页的示意图就是这样子:
 
-​	![mysql_btree_cndksfs](C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\mysql_btree_cndksfs.png)
+​	![mysql_btree_cndksfs](.\images\mysql_btree_cndksfs.png)
 
 ​	如图，我们生成了一个存储更高级目录项的页33 ，这个页中的两条记录分别代表页30和页32，如果数据项记录的主键值在 [1， 320)之间，则到页30中查找更详细的目录项记录，如果主键值不小于320 的话，就到页32中查找更详细的目录项记录。
 
 ​	我们可以用下边这个图来描述它：
 
-![mysql_btree_csanivd](C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\mysql_btree_csanivd.png)
+![mysql_btree_csanivd](.\images\mysql_btree_csanivd.png)
 
 ​	这个数据结构，它的名称是 B+树 。
 
@@ -598,7 +598,7 @@ B+树中，每一个记录（包括数据记录和目录项记录）结构如下
 
 #### 2.3.2 非聚簇索引
 
-![mysql_btree_xanoad](C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\mysql_btree_xanoad.png)
+![mysql_btree_xanoad](.\images\mysql_btree_xanoad.png)
 
 **概念**
 
@@ -700,13 +700,13 @@ MyISAM引擎使用 B+Tree 作为索引结构，叶子节点的data域存放的�
 
 - 使用MyISAM存储引擎的表会把索引信息另外存储到一个称为**索引文件**的另一个文件中。MyISAM会单独为表的主键创建一个索引，只不过在索引的**叶子节点中存储的不是完整的用户记录**，而是主键值 +数据记录地址的组合。
 
-<img src="C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\mysql_myisam_ncksan.png" alt="mysql_myisam_ncksan" style="zoom: 25%;" />
+<img src=".\images\mysql_myisam_ncksan.png" alt="mysql_myisam_ncksan" style="zoom: 25%;" />
 
 这里设表一共有三列，假设我们以C1为主键，上图是一个MylSAM表的主索引(Primary key)示意。可以看出MylSAM的索引文件仅仅保存数据记录的地址。**在MylSAM中，主键索引和二级索引(Secondary key)在结构上没有任何区别**，只是主键索引要求key是唯一的，而二级索引的key可以重复。
 
 如果我们在C2上建立一个二级索引，则此索引的结构如下图所示：
 
-<img src="C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\mysql_myisam_xsanklos.png" alt="mysql_myisam_xsanklos" style="zoom: 25%;" />
+<img src=".\images\mysql_myisam_xsanklos.png" alt="mysql_myisam_xsanklos" style="zoom: 25%;" />
 
 同样也是一棵B+Tree，data域保存数据记录的地址。因此，MylSAM中索引检索的算法为：首先按照B+Tree搜索算法搜索索引，如果指定的Key存在，则取出其data域的值，然后以data域的值为地址，读取相应用户记录。
 

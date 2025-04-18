@@ -230,7 +230,7 @@ Hi Hojay-Chen! You've successfully authenticated, but GitHub does not provide sh
 
 打开Gitee网站，点击个人主页，点击网站右上角如下图所示的加号，即可创建仓库。
 
-![gitee_fasdnm](C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\gitee_fasdnm.png)
+![gitee_fasdnm](.\images\gitee_fasdnm.png)
 
 ## 2. 克隆仓库到IDEA
 
@@ -260,7 +260,7 @@ Hi Hojay-Chen! You've successfully authenticated, but GitHub does not provide sh
 
 安装好gitee插件后，打开“File -> Settings -> Version Control -> Gitee”添加自己的Gitee账号，注意IDEA只支持用邮箱登录，如果Gitee没有绑定邮箱需要先绑定邮箱，如下图所示：
 
-<img src="C:\Users\陈浩杰\Desktop\Java开发笔记\我的笔记\images\git_IDEA_nvjsdn.png" alt="git_IDEA_nvjsdn" style="zoom:80%;" />
+<img src=".\images\git_IDEA_nvjsdn.png" alt="git_IDEA_nvjsdn" style="zoom:80%;" />
 
 ## 5. 在IDEA上传项目到Gitee
 
