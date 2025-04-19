@@ -1,58 +1,5 @@
 # 目录
-- [目录](#目录)
-- [一、Java容器](#一java容器)
-- [二、Java并发编程](#二java并发编程)
-  - [1. 线程运行状态](#1-线程运行状态)
-    - [1.1 线程运行状态介绍](#11-线程运行状态介绍)
-      - [1.1.1 NEW](#111-new)
-      - [1.1.2 RUNNABLE](#112-runnable)
-      - [1.1.3 BLOCKED](#113-blocked)
-      - [1.1.4 WAITING](#114-waiting)
-      - [1.1.5 TIMED\_WAITING](#115-timed_waiting)
-      - [1.1.6 TERMINATED](#116-terminated)
-    - [1.2 线程运行状态变化](#12-线程运行状态变化)
-      - [1.2.1 NEW-\>RUNNABLE](#121-new-runnable)
-      - [1.2.2 RUNNABLE-\>BLOCK](#122-runnable-block)
-      - [1.2.3 BLOCK -\> RUNNABLE](#123-block---runnable)
-      - [1.2.4 RUNNABLE -\> WATING](#124-runnable---wating)
-      - [1.2.5 WAITING -\> RUNNABLE](#125-waiting---runnable)
-      - [1.2.6 RUNNABLE -\> TIMED\_WAITING](#126-runnable---timed_waiting)
-      - [1.2.7 TIMED\_WAITING -\> RUNNABLE](#127-timed_waiting---runnable)
-      - [1.2.8 RUNNABLE -\> RUNNABLE](#128-runnable---runnable)
-      - [1.2.9 RUNNABLE -\> TERMINATED](#129-runnable---terminated)
-  - [2. 创建线程的方式](#2-创建线程的方式)
-    - [2.1 继承Thread类](#21-继承thread类)
-    - [2.2 实现Runnable接口](#22-实现runnable接口)
-    - [2.3 实现Callable接口](#23-实现callable接口)
-  - [3. 线程组](#3-线程组)
-  - [4. Java内存模型](#4-java内存模型)
-    - [4.1 并发编程特性](#41-并发编程特性)
-    - [4.2 Java并发问题产生原因](#42-java并发问题产生原因)
-      - [4.2.1 多线程并发内存结构](#421-多线程并发内存结构)
-      - [4.2.2 重排序](#422-重排序)
-    - [4.3 JMM规则](#43-jmm规则)
-      - [4.3.1 八种同步操作](#431-八种同步操作)
-      - [4.3.2 happens-before规则](#432-happens-before规则)
-      - [4.3.3 内存屏障](#433-内存屏障)
-  - [5. Java并发算法](#5-java并发算法)
-    - [5.1 CAS](#51-cas)
-    - [5.2 AQS](#52-aqs)
-  - [5. Java并发工具介绍](#5-java并发工具介绍)
-    - [5.1 volatile](#51-volatile)
-      - [5.1.1底层原理](#511底层原理)
-      - [5.1.2 使用教程](#512-使用教程)
-      - [5.1.3 实战场景](#513-实战场景)
-    - [5.2 synchronized](#52-synchronized)
-    - [5.3 ReentrantLock](#53-reentrantlock)
-    - [5.4 ReentrantReadWriteLock](#54-reentrantreadwritelock)
-- [三、JVM](#三jvm)
-  - [1. JVM内存结构](#1-jvm内存结构)
-    - [1.1 程序计数器](#11-程序计数器)
-    - [1.2 虚拟机栈](#12-虚拟机栈)
-    - [1.3 本地方法栈](#13-本地方法栈)
-    - [1.4 堆内存](#14-堆内存)
-    - [1.5 方法区](#15-方法区)
-    - [1.6 元空间](#16-元空间)
+
 
 
 # 一、Java容器
@@ -502,7 +449,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 ## 4. Java内存模型
 
-在学习Java内存模型之前需要先了解JVM的内存结构 [ [跳转到 JVM 内存结构](#JVM内存结构) ]。
+在学习Java内存模型之前需要先了解JVM的内存结构[ [跳转到JVM内存结构](#1-jvm内存结构) ]。
 
 Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环境下共享变量的访问规则。
 
@@ -536,7 +483,23 @@ Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环
 >
 > ​	**CPU缓存的工作方式：** 先将内存数据加载到CPU缓存中，当 CPU 需要用到的时候就可以直接从CPU缓存中读取数据，当运算完成后，再将运算得到的数据写回内存中。但是，这样存在**内存缓存不一致性的问题** ！
 >
-> ​	**CPU 为了解决内存缓存不一致性问题可以通过制定缓存一致协议（比如 [MESI 协议](https://zh.wikipedia.org/wiki/MESI协议)）或者其他手段来解决。** 
+> ​	**CPU 为了解决内存缓存不一致性问题可以通过制定缓存一致协议（比如 MESI 协议）或者其他手段来解决。** 
+>
+> 
+>
+> #### MESI 协议
+>
+> MESI 协议，全称为 Modified, Exclusive, Shared, Invalid，是一种高速缓存一致性协议。它是为了解决多处理器（CPU）在并发环境下，多个 CPU 缓存不一致问题而提出的。
+> MESI 协议定义了高速缓存中数据的四种状态：
+>
+> 1. **Modified（M）**：表示缓存行已经被修改，但还没有被写回主存储器。在这种状态下，只有一个 CPU 能独占这个修改状态。
+> 2. **Exclusive（E）**：表示缓存行与主存储器相同，并且是主存储器的唯一拷贝。这种状态下，只有一个 CPU 能独占这个状态。
+> 3. **Shared（S）**：表示此高速缓存行可能存储在计算机的其他高速缓存中，并且与主存储器匹配。在这种状态下，各个 CPU 可以并发的对这个数据进行读取，但都不能进行写操作。
+> 4. **Invalid（I）**：表示此缓存行无效或已过期，不能使用。
+>
+> MESI 协议的主要用途是确保在多个 CPU 共享内存时，各个 CPU 的缓存数据能够保持一致性。当某个 CPU 对共享数据进行修改时，它会将这个数据的状态从 S（共享）或 E（独占）状态转变为 M（修改）状态，并等待适当的时机将这个修改写回主存储器。同时，它会向其他 CPU 广播一个“无效消息”，使得其他 CPU 将自己缓存中对应的数据状态转变为I（无效）状态，从而在下次访问这个数据时能够从主存储器或其他 CPU 的缓存中重新获取正确的数据。
+>
+> 这种协议可以确保在多处理器环境中，各个 CPU 的缓存数据能够正确、一致地反映主存储器中的数据状态，从而避免由于缓存不一致导致的数据错误或程序异常。
 
 ​	Java多线程并发执行时，每个线程会有一个本地内存，同时所有线程会共用主内存，结构如下图：
 
@@ -631,7 +594,9 @@ Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环
 
 
 
-## 5. Java并发算法
+## 5. Java并发的设计思想
+
+**Java 的锁都是基于对象的**，而一个对象的“锁”存放在对象内存空间的对象头的mark word部分，详细可见JVM对象内存结构部分[ [跳转到对象内存结构](#17-对象内存结构) ]。
 
 ### 5.1 CAS
 
@@ -641,13 +606,11 @@ Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环
 
 
 
-## 5. Java并发工具介绍
+## 6. Java并发工具介绍
 
-**Java 的锁都是基于对象的**，而一个对象的“锁”存放在对象内存空间的对象头的mark word部分，详细可见[1.2.9 RUNNABLE -\> TERMINATED](#129-runnable---terminated)。
+### 6.1 volatile
 
-### 5.1 volatile
-
-#### 5.1.1底层原理
+#### 6.1.1底层原理
 
 **有序性**
 
@@ -665,29 +628,15 @@ Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环
 
 **可见性**
 
-操作volatile变量的可见性通过MESI协议实现。对volatile变量执行写操作回写主内存的时候会通过 MESI 协议使其他线程缓存了该变量的地址失效，从而导致其他线程需要重新去主内存中重新读取数据到其工作线程中。
-
-> #### 什么 MESI 协议？
->
-> MESI 协议，全称为 Modified, Exclusive, Shared, Invalid，是一种高速缓存一致性协议。它是为了解决多处理器（CPU）在并发环境下，多个 CPU 缓存不一致问题而提出的。
-> MESI 协议定义了高速缓存中数据的四种状态：
->
-> 1. **Modified（M）**：表示缓存行已经被修改，但还没有被写回主存储器。在这种状态下，只有一个 CPU 能独占这个修改状态。
-> 2. **Exclusive（E）**：表示缓存行与主存储器相同，并且是主存储器的唯一拷贝。这种状态下，只有一个 CPU 能独占这个状态。
-> 3. **Shared（S）**：表示此高速缓存行可能存储在计算机的其他高速缓存中，并且与主存储器匹配。在这种状态下，各个 CPU 可以并发的对这个数据进行读取，但都不能进行写操作。
-> 4. **Invalid（I）**：表示此缓存行无效或已过期，不能使用。
->
-> MESI 协议的主要用途是确保在多个 CPU 共享内存时，各个 CPU 的缓存数据能够保持一致性。当某个 CPU 对共享数据进行修改时，它会将这个数据的状态从 S（共享）或 E（独占）状态转变为 M（修改）状态，并等待适当的时机将这个修改写回主存储器。同时，它会向其他 CPU 广播一个“无效消息”，使得其他 CPU 将自己缓存中对应的数据状态转变为I（无效）状态，从而在下次访问这个数据时能够从主存储器或其他 CPU 的缓存中重新获取正确的数据。
->
-> 这种协议可以确保在多处理器环境中，各个 CPU 的缓存数据能够正确、一致地反映主存储器中的数据状态，从而避免由于缓存不一致导致的数据错误或程序异常。
+操作volatile变量的可见性通过在每次线程进行volatile读的时候都从主内存读取，每次线程进行volatile写的时候都将数据写回主内存，从而保证了可见性。
 
 **原子性**
 
-volatile不保证操作的原子性
+volatile不保证操作的原子性。
 
 
 
-#### 5.1.2 使用教程
+#### 6.1.2 使用教程
 
 - 先看下面未使用 volatile 的代码，假设writer和reader分别在两个不同线程中运行：
 
@@ -830,7 +779,7 @@ volatile不保证操作的原子性
 
 
 
-#### 5.1.3 实战场景
+#### 6.1.3 实战场景
 
 **volatile 实现单例模式的双重锁**
 
@@ -906,13 +855,236 @@ public static Penguin getInstance() {
 
 
 
-### 5.2 synchronized
+### 6.2 synchronized
+
+#### 6.2.1 底层原理
+
+`synchronized`关键字可以保证并发编程的三大特性：原子性、可见性、有序性，而`volatile`关键字只能保证可见性和有序性，不能保证原子性，也称为是轻量级的`synchronized`。
+
+**重量级锁**
 
 
 
-### 5.3 ReentrantLock
 
-### 5.4 ReentrantReadWriteLock
+
+#### 6.2.2 使用教程
+
+synchronized 关键字最主要有以下 3 种应用方式：
+
+- 同步方法，为当前对象（this）加锁，进入同步代码前要获得当前对象的锁；
+- 同步静态方法，为当前类加锁（锁的是 Class 对象），进入同步代码前要获得当前类的锁；
+- 同步代码块，指定加锁对象，对给定对象加锁，进入同步代码库前要获得给定对象的锁。
+
+
+
+##### synchronized同步方法
+
+**介绍**
+
+对于 synchronized 同步静态方法，调用当前方法的线程获取被调用方法的对象的锁，保证同时刻下只有一个线程调用该对象的该方法。
+
+**格式**
+
+    public class Clazz{
+    	public synchronized void method() {
+    		...
+        }
+    }
+
+synchronized同步方法等价于如下代码块
+
+```
+public class Clazz{
+	public void method() {
+		synchronized(this) {
+			...
+		}
+    }
+}
+```
+
+
+
+##### synchronized同步静态方法
+
+**介绍**
+
+对于 synchronized 同步静态方法，调用当前静态方法的线程获取方法所在类的 Class 对象的锁，因此任何其他线程在锁释放之前都无法调用该静态方法，保证了同时刻下只有一个线程调用该静态方法。
+
+**格式**
+
+```
+public class Clazz{
+	public static synchronized void method() {
+		...
+    }
+}
+```
+
+synchronized同步静态方法等价于如下代码块
+
+```
+public class Clazz{
+	public void method() {
+		synchronized(Clazz.class) {
+			...
+		}
+    }
+}
+```
+
+由于静态成员变量不专属于任何一个对象，因此通过 Class 锁可以控制静态成员变量的并发操作。
+
+
+
+##### synchronized同步代码块
+
+**介绍**
+
+某些情况下，编写的方法代码量比较多，存在一些比较耗时的操作，而需要同步的代码块只有一小部分，如果直接对整个方法进行同步，可能会得不偿失，此时可以使用同步代码块的方式对需要同步的代码进行包裹。
+
+**格式**
+
+```
+synchronized(object) {
+    ...
+}
+```
+
+
+
+#### 6.2.3 实战场景
+
+##### synchronized同步方法
+
+```
+public class AccountingSync implements Runnable {
+    //共享资源(临界资源)
+    static int i = 0;
+    // synchronized 同步方法
+    public synchronized void increase() {
+        i ++;
+    }
+    @Override
+    public void run() {
+        for(int j=0;j<1000000;j++){
+            increase();
+        }
+    }
+    public static void main(String args[]) throws InterruptedException {
+        AccountingSync instance = new AccountingSync();
+        Thread t1 = new Thread(instance);
+        Thread t2 = new Thread(instance);
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        System.out.println("static, i output:" + i);
+    }
+}
+```
+
+输出结果：
+
+```
+static, i output:2000000
+```
+
+如果在方法 `increase()` 前不加 synchronized，因为 i++ 不具备原子性，所以最终结果会小于 2000000。
+
+注意：一个对象只有一把锁，当一个线程获取了该对象的锁之后，其他线程无法获取该对象的锁，所以无法访问该对象的其他 synchronized 方法，但是其他线程还是可以访问该对象的其他非 synchronized 方法。
+
+
+
+##### synchronized同步静态方法
+
+```
+public class AccountingSyncClass implements Runnable {
+    static int i = 0;
+    /**
+     * 同步静态方法,锁是当前class对象，也就是
+     * AccountingSyncClass类对应的class对象
+     */
+    public static synchronized void increase() {
+        i++;
+    }
+    // 非静态,访问时锁不一样不会发生互斥
+    public synchronized void increase4Obj() {
+        i++;
+    }
+    @Override
+    public void run() {
+        for(int j=0;j<1000000;j++){
+            increase();
+        }
+    }
+    public static void main(String[] args) throws InterruptedException {
+        //new新实例
+        Thread t1=new Thread(new AccountingSyncClass());
+        //new新实例
+        Thread t2=new Thread(new AccountingSyncClass());
+        //启动线程
+        t1.start();t2.start();
+        t1.join();t2.join();
+        System.out.println(i);
+    }
+}
+```
+
+输出结果:
+
+```
+2000000
+```
+
+由于 synchronized 关键字同步的是静态的 increase 方法，与同步实例方法不同的是，其锁对象是当前类的 Class 对象。
+
+
+
+##### synchronized代码块
+
+```
+public class AccountingSync2 implements Runnable {
+    static AccountingSync2 instance = new AccountingSync2(); // 饿汉单例模式
+
+    static int i=0;
+
+    @Override
+    public void run() {
+        //省略其他耗时操作....
+        //使用同步代码块对变量i进行同步操作,锁对象为instance
+        synchronized(instance){
+            for(int j=0;j<1000000;j++){
+                i++;
+            }
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        Thread t1=new Thread(instance);
+        Thread t2=new Thread(instance);
+        t1.start();t2.start();
+        t1.join();t2.join();
+        System.out.println(i);
+    }
+}
+```
+
+输出结果：
+
+```
+2000000
+```
+
+我们将 synchronized 作用于一个给定的实例对象 instance，即当前实例对象就是锁的对象，当线程进入 synchronized 包裹的代码块时就会要求当前线程持有 instance 实例对象的锁，如果当前有其他线程正持有该对象锁，那么新的线程就必须等待，这样就保证了每次只有一个线程执行 `i++` 操作。
+
+
+
+### 6.3 ReentrantLock
+
+
+
+### 6.4 ReentrantReadWriteLock
 
 
 
@@ -975,6 +1147,108 @@ public static Penguin getInstance() {
 
 
 ### 1.7 对象内存结构
+
+HotSpot 虚拟机中，对象在内存中存储的布局可以分为三块区域：对象头（Header）、实例数据（Instance Data）和对齐填充（Padding）。
+
+![object_memory_xnldlk](E:\各种资料\Java开发笔记\我的笔记\images\object_memory_xnldlk.png)
+
+#### 1.7.1 对象头
+
+HotSpot虚拟机的对象头分为两部分信息，第一部分用于存储对象自身运行时数据，如哈希码、GC分代年龄等，这部分数据的长度在32位和64位的虚拟机中分别为32位和64位。官方称为Mark Word。另一部分用于存储指向对象类型数据的指针，如果是数组对象的话，还会有一个额外的部分存储数组长度。
+
+![object_memory_papfq](E:\各种资料\Java开发笔记\我的笔记\images\object_memory_papfq.png)
+
+先简单介绍下对象头的形式，JVM中对象头的方式有以下两种（以32位JVM为例）：
+
+普通对象：
+
+![object_memory_apqnp](E:\各种资料\Java开发笔记\我的笔记\images\object_memory_apqnp.png)
+
+数组对象：
+
+![object_memory_nconajp](E:\各种资料\Java开发笔记\我的笔记\images\object_memory_nconajp.png)
+
+##### 1.7.1.1 Mark Word
+这部分主要用来存储对象自身的运行时数据，如hashcode、gc分代年龄等。mark word的位长度为JVM的一个Word大小，也就是说32位JVM的Mark word为32位，64位JVM为64位。
+为了让一个字大小存储更多的信息，JVM将字的最低两个位设置为标记位，不同标记位下的Mark Word示意如下：
+
+![object_memory_zmpbng](E:\各种资料\Java开发笔记\我的笔记\images\object_memory_zmpbng.png)
+
+其中各部分的含义如下：
+
+- lock：2位的锁状态标记位，由于希望用尽可能少的二进制位表示尽可能多的信息，所以设置了lock标记。该标记的值不同，整个mark word表示的含义不同。
+
+![object_memory_mvjso](E:\各种资料\Java开发笔记\我的笔记\images\object_memory_mvjso.png)
+
+- bias_lock：对象是否启动偏向锁标记，只占1个二进制位。为1时表示对象启动偏向锁，为0时表示对象没有偏向锁。
+
+- age：4位的Java对象年龄。在GC中，如果对象在Survivor区复制一次，年龄增加1。当对象达到设定的阈值时，将会晋升到老年代。默认情况下，并行GC的年龄阈值为15，并发GC的年龄阈值为6。由于age只有4位，所以最大值为15，这就是-XX:MaxTenuringThreshold选项最大值为15的原因。
+- identity_hashcode：25位的对象标识Hash码，采用延迟加载技术。调用方法System.identityHashCode()计算，并会将结果写到该对象头中。当对象被锁定时，该值会移动到管程Monitor中。
+- thread：持有偏向锁的线程ID。
+- epoch：偏向时间戳。
+- ptr_to_lock_record：指向栈中锁记录的指针。
+- ptr_to_heavyweight_monitor：指向monitor对象（也称为管程或监视器锁）的起始地址，每个对象都存在着一个monitor与之关联，对象与其monitor之间的关系有存在多种实现方式，如monitor对象可以与对象一起创建销毁或当前线程试图获取对象锁时自动生，但当一个monitor被某个线程持有后，它便处于锁定状态。
+
+
+
+##### 1.7.1.2 class pointer
+这一部分用于存储对象的类型指针，该指针指向它的类元数据，JVM通过这个指针确定对象是哪个类的实例。该指针的位长度为JVM的一个字大小，即32位的JVM为32位，64位的JVM为64位。
+
+如果应用的对象过多，使用64位的指针将浪费大量内存，统计而言，64位的JVM将会比32位的JVM多耗费50%的内存。为了节约内存可以使用选项+UseCompressedOops开启指针压缩，其中，oop即ordinary object pointer普通对象指针。开启该选项后，下列指针将压缩至32位：
+
+- 每个Class的属性指针（即静态变量）
+- 每个对象的属性指针（即对象变量）
+- 普通对象数组的每个元素指针
+
+当然，也不是所有的指针都会压缩，一些特殊类型的指针JVM不会优化，比如指向PermGen的Class对象指针(JDK8中指向元空间的Class对象指针)、本地变量、堆栈元素、入参、返回值和NULL指针等。
+
+ 
+
+##### 1.7.1.3 array length
+
+如果对象是一个数组，那么对象头还需要有额外的空间用于存储数组的长度，这部分数据的长度也随着JVM架构的不同而不同：32位的JVM上，长度为32位；64位JVM则为64位。64位JVM如果开启+UseCompressedOops选项，该区域长度也将由64位压缩至32位。
+
+
+
+#### 1.7.2 实例数据
+
+实例数据：存放类的属性数据信息，包括父类的属性信息，如果是数组的实例部分还包括数组的长度，这部分内存按4字节对齐。
+
+
+
+#### 1.7.3 填充数据
+
+填充数据：由于虚拟机要求对象起始地址必须是8字节的整数倍。填充数据不是必须存在的，仅仅是为了字节对齐。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

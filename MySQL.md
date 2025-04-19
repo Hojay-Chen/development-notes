@@ -6,7 +6,7 @@
 
 MySQL的逻辑架构总体分为两层，分别为Server层和引擎层，如下图所示：
 
-![mysql_architecture_opanfk](.\images\mysql_architecture_opanfk.jpg)
+<img src=".\images\mysql_architecture_opanfk.jpg" />
 
 **Server层：**主要包括**连接器**、**查询缓存**、**分析器**、**优化器**、**执行器**等，可以说此层涵盖了MySQL的**大多数核心服务功能**，以及**所有的内置函数**（如日期、时间、数学和加密函数等），**所有跨存储引擎的功能**都在这一层实现，比如存储过程、触发器、视图等。
 
