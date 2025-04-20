@@ -35,7 +35,7 @@
 
 ## 2. 饿汉式（静态常量） 
 
-```
+```java
 public class Singleton01 {
 
   // 定义静态属性存储唯一的实例对象
@@ -53,7 +53,7 @@ public class Singleton01 {
 
 ## 3. 饿汉式（静态代码块）
 
-```
+```java
 public class Singleton02 {
   // 定义静态属性存储唯一的实例对象
   private static Singleton02 instance;
@@ -73,7 +73,7 @@ public class Singleton02 {
 
 ## 4. 懒汉式（线程不安全）
 
-```
+```java
 public class Singleton03 {
   private static Singleton03 instance;
 
@@ -93,7 +93,7 @@ public class Singleton03 {
 
 ## 5. 懒汉式(线程安全，同步方法) 
 
-```
+```java
 public class Singleton04 {
   private static Singleton04 instance;
   
@@ -113,7 +113,7 @@ public class Singleton04 {
 
 ## 6. 懒汉式(线程不安全，同步代码块) 
 
-```
+```java
 public class Singleton05 {
   private static Singleton05 instance;
 
@@ -135,7 +135,7 @@ public class Singleton05 {
 
 ## 7. 双重检查 
 
-```
+```java
 public class Singleton06 {
   private static volatile Singleton06 instance;
 
@@ -158,7 +158,7 @@ public class Singleton06 {
 
 ## 8. 静态内部类 
 
-```
+```java
 public class Singleton07 {
   private Singleton07() {}
   
@@ -177,7 +177,7 @@ public class Singleton07 {
 
 ## 9. 枚举
 
-```
+```java
 enum Singleton08 {
   INSTANCE;
 }

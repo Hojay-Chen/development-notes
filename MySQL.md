@@ -177,7 +177,7 @@ query_cache_type有3个值：
 +---+------------+
 2 rows in set (0.00 sec)
 "1"，"record one"
-"2"，"record two"存储在Memory表中的数据如果突然间 丢失的话也没有太大的关系 。
+"2"，"record two"存储在Memory表中的数据如果突然间丢失的话也没有太大的关系 。
 ```
 
 
@@ -2174,27 +2174,25 @@ mysql> EXPLAIN SELECT * FROM s1 INNER JOIN s2 ON s1.key1 = s2.key1 WHERE s1.comm
 
 # 三、MySQL事务篇
 
-## 1. 事务
-
-### 1.1 基本概念
+## 1. 事务的基本概念
 
 **事务：**一组逻辑操作单元，使数据从一种状态变换到另一种状态。(一组不可分隔的操作)
 
 **事务处理的原则：**保证所有事务都作为 `一个工作单元` 来执行，即使出现了故障，都不能改变这种执行方 式。当在一个事务中执行多个操作时，要么所有的事务都被提交( `commit` )，那么这些修改就 `永久` 地保 `存下来`；要么数据库管理系统将 `放弃` 所作的所有 `修改` ，整个事务回滚( rollback )到最初状态。
 
-### 1.2 引擎支持情况
+## 2. 引擎支持情况
 
 `SHOW ENGINES` 命令来查看当前 MySQL 支持的存储引擎都有哪些，以及这些存储引擎是否支持事务。
 
 ![image-20240924221853655](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f2ca4cb45c2.png)
 
-### 1.3 事务的ACID特性
+## 3. 事务的ACID特性
 
-#### 1.3.1 原子性（atomicity）
+### 3.1 原子性（atomicity）
 
 ​	原子性是指事务是一个不可分割的工作单位，**要么全部提交，要么全部失败回滚**。即要么转账成功，要么转账失败，是不存在中间的状态。如果无法保证原子性会怎么样？就会出现数据不一致的情形，A账户减去100元，而B账户增加100元操作失败，系统将无故丢失100元。
 
-#### 1.3.2 一致性（consistency）
+### 3.2 一致性（consistency）
 
 ​	根据定义，一致性是指事务执行前后，数据从一个 `合法性状态` 变换到另外一个 `合法性状态` 。这种状态是 `语义上` 的而不是语法上的，跟具体的业务有关。
 
@@ -2206,7 +2204,7 @@ mysql> EXPLAIN SELECT * FROM s1 INNER JOIN s2 ON s1.key1 = s2.key1 WHERE s1.comm
 >
 > **举例3：**在数据表中我们将`姓名`字段设置为`唯一性约束`，这时当事务进行提交或者事务发生回滚的时候，如果数据表的姓名不唯一，就破坏了事务的一致性要求。
 
-#### 1.3.3 隔离性（isolation）
+### 3.3 隔离性（isolation）
 
 ​	事务的隔离性是指一个事务的执行`不能被其他事务干扰`，即一个事务内部的操作及使用的数据对`并发`的其他事务是隔离的，并发执行的各个事务之间不能相互干扰。
 
@@ -2219,13 +2217,15 @@ UPDATE accounts SET money = money + 50 WHERE NAME = 'BB';
 
 ![image-20240924222855450](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f2cca67ddf9.png)
 
-#### 1.3.4 持久性（durability)
+### 3.4 持久性（durability)
 
 ​	持久性是指一个事务一旦被提交，它对数据库中数据的改变就是 `永久性的` ，接下来的其他操作和数据库故障不应该对其有任何影响。
 
 ​	持久性是通过 `事务日志` 来保证的。日志包括了 `redo log` 和 `undo log` 。当我们通过事务对数据进行修改 的时候，首先会将数据库的变化信息记录到重做日志中，然后再对数据库中对应的行进行修改。这样做 的好处是，即使数据库系统崩溃，数据库重启后也能找到没有更新到数据库系统中的重做日志，重新执 行，从而使事务具有持久性。
 
-### 1.4 事务的状态
+
+
+## 4 事务的状态
 
 一个基本的状态转换图如下所示：
 
@@ -2233,31 +2233,33 @@ UPDATE accounts SET money = money + 50 WHERE NAME = 'BB';
 
 ​	图中可见，只有当事务处于`提交的`或者`中止的`状态时，一个事务的生命周期才算是结束了。对于**已经提交的事务**来说，该事务对数据库所做的修改将永久生效；对于**处于中止状态的事务**，该事务对数据库所做的所有修改都会被回滚到没执行该事务之前的状态。
 
-#### 1.4.1 活动的（active）
+### 4.1 活动的（active）
 
 ​	事务对应的数据库操作正在执行过程中时，我们就说该事务处在 `活动的` 状态。
 
-#### 1.4.2 部分提交的（partially committed）
+### 4.2 部分提交的（partially committed）
 
 ​	当事务中的最后一个操作执行完成，但由于操作都在内存中执行，所造成的影响并 `没有刷新到磁盘` 时，我们就说该事务处在 `部分提交的` 状态。
 
-#### 1.4.3 失败的（failed）
+### 4.3 失败的（failed）
 
-​	当事务处在 `活动的` 或者 部分提交的 状态时，可能遇到了某些错误（数据库自身的错误、操作系统 错误或者直接断电等）而无法继续执行，或者人为的停止当前事务的执行，我们就说该事务处在 失 败的 状态。
+​	当事务处在 `活动的` 或者 部分提交的 状态时，可能遇到了某些错误（数据库自身的错误、操作系统 错误或者直接断电等）而无法继续执行，或者人为的停止当前事务的执行，我们就说该事务处在失败的状态。
 
-#### 1.4.4 中止的（aborted）
+### 4.4 中止的（aborted）
 
 ​	如果事务执行了一部分而变为 `失败的` 状态，那么就需要把已经修改的事务中的操作还原到事务执 行前的状态。换句话说，就是要撤销失败事务对当前数据库造成的影响。我们把这个撤销的过程称之为 `回滚` 。当 `回滚` 操作执行完毕时，也就是数据库恢复到了执行事务之前的状态，我们就说该事 务处在了 `中止的` 状态。
 
-#### 1.4.5 提交的（committed）
+### 4.5 提交的（committed）
 
 ​	当一个处在 `部分提交的` 状态的事务将修改过的数据都 `同步到磁盘` 上之后，我们就可以说该事务处在了 `提交的` 状态。
 
-### 1.5 如何使用事务
+
+
+## 5 事务的使用
 
 使用事务有两种方式，分别为 `显式事务` 和 `隐式事务` 。
 
-#### 1.5.1 显式事务
+### 5.1 显式事务
 
 **步骤1：** **START TRANSACTION** 或者 **BEGIN** ，作用是显式开启一个事务。
 
@@ -2305,9 +2307,11 @@ SAVEPOINT 保存点名称;
 RELEASE SAVEPOINT 保存点名称;
 ```
 
-#### 1.5.2 隐式事务
 
-##### 1.5.2.1 autocommit
+
+### 5.2 隐式事务
+
+#### 5.2.1 autocommit
 
 ​	MySQL中有一个系统变量 `autocommit` ，默认开启，此时每一句SQL语句都是一个事务。
 
@@ -2334,7 +2338,7 @@ mysql> SHOW VARIABLES LIKE 'autocommit';
 > SET autocommit = 0;
 > ```
 
-##### 1.5.2.2 数据定义语言
+#### 5.2.2 数据定义语言
 
 ​	数据定义语言（Data definition language，缩写为：DDL）是用来操作数据库对象的SQL语言。
 
@@ -2350,11 +2354,11 @@ UPDATE ... # 事务中的一条语句
 CREATE TABLE ... # 此语句会隐式的提交前边语句所属于的事务
 ```
 
-##### 1.5.2.3 隐式使用或修改mysql数据库中的表
+#### 5.2.3 隐式使用或修改mysql数据库中的表
 
 ​	当我们使用`ALTER USER`、`CREATE USER`、`DROP USER`、`GRANT`、`RENAME USER`、`REVOKE`、`SET PASSWORD`等语句时也会隐式的提交前边语句所属于的事务。
 
-##### 1.5.2.4 事务控制或关于锁定的语句
+#### 5.2.4 事务控制或关于锁定的语句
 
 ​	① 当我们在一个事务还没提交或者回滚时就又使用 START TRANSACTION 或者 BEGIN 语句开启了另一个事务时，会隐式的提交上一个事务。即：
 
@@ -2372,21 +2376,23 @@ BEGIN; # 此语句会隐式的提交前边语句所属于的事务
 
 ​	③ 使用 LOCK TABLES 、 UNLOCK TABLES 等关于锁定的语句也会隐式的提交前边语句所属的事务。
 
-##### 1.5.2.5 加载数据的语句
+#### 5.2.5 加载数据的语句
 
 ​	使用`LOAD DATA`语句来批量往数据库中导入数据时，也会`隐式的提交`前边语句所属的事务。
 
-##### 1.5.2.6 关于MySQL复制的一些语句
+#### 5.2.6 关于MySQL复制的一些语句
 
 ​	使用`START SLAVE、STOP SLAVE、RESET SLAVE、CHANGE MASTER TO`等语句会隐式的提交前边语句所属的事务。
 
-##### ~~5.2.7 其他的一些语句~~
+#### ~~5.2.7 其他的一些语句~~
 
 ​	~~使用`ANALYZE TABLE、CACHE INDEX、CAECK TABLE、FLUSH、LOAD INDEX INTO CACHE、OPTIMIZE TABLE、REPAIR TABLE、RESET`等语句也会隐式的提交前边语句所属的事务。~~
 
-### 1.6 事务隔离级别
 
-#### 1.6.1 数据并发问题
+
+## 6 事务隔离级别
+
+### 6.1 数据并发问题
 
 ​	并发事务执行过程中可能遇到的一些问题，这些问题有轻重缓急之分，我们给这些问题按照严重性来排一下序：
 
@@ -2394,7 +2400,7 @@ BEGIN; # 此语句会隐式的提交前边语句所属于的事务
 脏写 > 脏读 > 不可重复读 > 幻读
 ```
 
-##### 1.6.1.1 脏写（ Dirty Write ）
+#### 6.1.1 脏写（ Dirty Write ）
 
 ​	对于两个事务 Session A、Session B，如果事务Session A `修改了` 另一个 `未提交` 事务Session B `修改过` 的数据，那就意味着发生了 `脏写`，示意图如下：
 
@@ -2402,7 +2408,7 @@ BEGIN; # 此语句会隐式的提交前边语句所属于的事务
 
 ​	Session A 和 Session B 各开启了一个事务，Sesssion B 中的事务先将studentno列为1的记录的name列更新为'李四'，然后Session A中的事务接着又把这条studentno列为1的记录的name列更新为'张三'。如果之后Session B中的事务进行了回滚，那么Session A中的更新也将不复存在，这种现象称之为脏写。这时Session A中的事务就没有效果了，明明把数据更新了，最后也提交事务了，最后看到的数据什么变化也没有。
 
-##### 1.6.1.2 脏读（ Dirty Read ）
+#### 6.1.2 脏读（ Dirty Read ）
 
 ​	对于两个事务 Session A、Session B，Session A `读取` 了已经被 Session B `更新` 但还 `没有被提交` 的字段。 之后若 Session B `回滚` ，Session A `读取 `的内容就是 `临时且无效` 的。
 
@@ -2410,7 +2416,7 @@ BEGIN; # 此语句会隐式的提交前边语句所属于的事务
 
 ​	Session A和Session B各开启了一个事务，Session B中的事务先将studentno列为1的记录的name列更新 为'张三'，然后Session A中的事务再去查询这条studentno为1的记录，如果读到列name的值为'张三'，而 Session B中的事务稍后进行了回滚，那么Session A中的事务相当于读到了一个不存在的数据，这种现象就称之为 `脏读` 。
 
-##### 1.6.1.3 不可重复读（ Non-Repeatable Read ）
+#### 6.1.3 不可重复读（ Non-Repeatable Read ）
 
 ​	对于两个事务Session A、Session B，Session A `读取`了一个字段，然后 Session B `更新`了该字段。 之后 Session A `再次读取` 同一个字段， `值就不同` 了。那就意味着发生了不可重复读。
 
@@ -2418,7 +2424,7 @@ BEGIN; # 此语句会隐式的提交前边语句所属于的事务
 
 ​	我们在Session B中提交了几个 `隐式事务` （注意是隐式事务，意味着语句结束事务就提交了），这些事务 都修改了studentno列为1的记录的列name的值，每次事务提交之后，如果Session A中的事务都可以查看到最新的值，这种现象也被称之为 `不可重复读 `。
 
-##### 1.6.1.4 幻读（ Phantom ）
+#### 6.1.4 幻读（ Phantom ）
 
 ​	对于两个事务Session A、Session B， Session A 从一个表中 `读取` 了一个字段， 然后 Session B 在该表中 插 入 了一些新的行。 之后， 如果 Session A `再次读取` 同一个表， 就会多出几行。那就意味着发生了`幻读`。
 
@@ -2426,29 +2432,33 @@ BEGIN; # 此语句会隐式的提交前边语句所属于的事务
 
 ​	Session A中的事务先根据条件 studentno > 0这个条件查询表student，得到了name列值为'张三'的记录； 之后Session B中提交了一个 `隐式事务` ，该事务向表student中插入了一条新记录；之后Session A中的事务 再根据相同的条件 studentno > 0查询表student，得到的结果集中包含Session B中的事务新插入的那条记 录，这种现象也被称之为 幻读 。我们把新插入的那些记录称之为 `幻影记录` 。
 
-#### 1.6.2 SQL中的四种隔离级别
+
+
+### 6.2 SQL中的四种隔离级别
 
 ​	不同的隔离级别有不同的现象，并有不同的锁和并发机制，**隔离级别越高**，数据库的**并发性能就越差**，4 种事务隔离级别与并发性能的关系如下：
 
 ![image-20220708220957108](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f375edc39e5.png)
 
-##### 1.6.2.1 `READ UNCOMMITTED`
+#### 6.2.1 `READ UNCOMMITTED`
 
 ​	读未提交，在该隔离级别，所有事务都可以看到其他未提交事务的执行结 果。**只能避免脏写**，不能避免脏读、不可重复读、幻读。
 
-##### 1.6.2.2 `READ COMMITTED`
+#### 6.2.2 `READ COMMITTED`
 
 ​	读已提交，它满足了隔离的简单定义：一个事务只能看见已经提交事务所做的改变。这是**大多数数据库系统的默认隔离级别**（但不是MySQL默认的）。可以**避免脏读**，但不可重复读、幻读问题仍然存在。
 
-##### 1.6.2.3 `REPEATABLE READ`
+#### 6.2.3 `REPEATABLE READ`
 
 ​	可重复读，事务A在读到一条数据之后，此时事务B对该数据进行了修改并提交，那么事务A再读该数据，读到的还是原来的内容。可以**避免脏读、不可重复读**，但幻读问题仍 然存在。这是**MySQL的默认隔离级别**。
 
-##### 1.6.2.4 `SERIALIZABLE`
+#### 6.2.4 `SERIALIZABLE`
 
 ​	可串行化，确保事务可以从一个表中读取相同的行。在这个事务持续期间，禁止其他事务对该表执行插入、更新和删除操作。所有的并发问题都可以避免，但性能十分低下。能**避免脏读、不可重复读和幻读**。
 
-#### 1.6.3 如何设置事务的隔离级别
+
+
+### 6.3 如何设置事务的隔离级别
 
 通过下面的语句修改事务的隔离级别：
 
@@ -2493,18 +2503,17 @@ SET SESSION TRANSACTION_ISOLATION = 'SERIALIZABLE';
 ​	如果在服务器启动时想改变事务的默认隔离级别，可以修改启动参数`transaction_isolation`的值。比如，在启动服务器时指定了`transaction_isolation=SERIALIZABLE`，那么事务的默认隔离界别就从原来的`REPEATABLE-READ`变成了`SERIALIZABLE`。
 
 
+## 7. 三大日志
 
-## 2. 三大日志
+### 7.1 总述
 
-### 2.1 总述
-
-#### 2.1.1 概念总述	
+#### 7.1.1 概念总述	
 
 ​	**Buffer Pool**：`MySQL`中数据是**以页为单数存储**，当你查询一条记录时，硬盘会把一整页的数据加载出来，加载出来的数据叫做数据页，会放到`Buffer Pool`中。后续的查询都是先从`Buffer Pool`中找，没有找到再去硬盘加载其他的数据页直到命中，这样子可以减少磁盘`IO`的次数，提高性能。
 
 ​	**redo log**：是**事务持久性和一致性**的保障，是一个**物理日志**，是  **InnoDB存储引擎** 独有的，它让`MySQL`有了**崩溃恢复**的能力。当`MySQL`实例挂了或者宕机了，**重启的时候**`InnoDB`存储引擎会使用`rede log`日志**恢复数据**，**保证事务的持久性和完整性**。
 
-#### 2.1.2 执行流程总述
+#### 7.1.2 执行流程总述
 
 （1）从`Buffer Pool`中找被相关的数据，没有找到再去硬盘加载其他的数据页直到命中。
 
@@ -2520,25 +2529,25 @@ SET SESSION TRANSACTION_ISOLATION = 'SERIALIZABLE';
 
 （7）将`Undo Log`和`Redo Log`进行刷盘，并且`Redo Log`记为`Prepare`状态一同刷入磁盘中。
 
-（8）将`Binlog Cache`刷入`Binlog`文件中，并将`Redo Log`状态更新为`Commit`状态，但不把状态刷入磁盘。
+（8）将`Binlog Cache`刷入`Binlog`文件中，并将`Redo Log`状态更新为`Commit`状态。
 
 ![MySQL高频八股——事务过程中undolog、redolog、binlog的写入顺序（涉及两阶段提交）](https://picx.zhimg.com/70/v2-fe1e5401b53ebde013e929491aeda1d6_1440w.image?source=172ae18b&biz_tag=Post)
 
-### 2.2 Redo Log
+### 7.2 Redo Log
 
-#### 2.2.1 概念
+#### 7.2.1 概念
 
 ​	**redo log**是事务**持久性和原子性**的保障；是一个**物理日志**（每条`redo log`记录由“`表空间号+数据页号+偏移量+修改数据长度+具体修改的数据`”组成）；是  **InnoDB存储引擎** 独有的；它让`MySQL`有了**崩溃恢复**的能力，当`MySQL`实例挂了或者宕机了，**重启的时候**`InnoDB`存储引擎会使用`rede log`日志**恢复数据**，**保证事务的持久性和完整性**。如下图：
 
 ![img](https://segmentfault.com/img/remote/1460000041758787)
 
-#### 2.2.2 写入机制
+#### 7.2.2 写入机制
 
 ​	更新数据的时候会把 “在某个数据页做了什么修改” 记录到`redo log buffer`里，在合适的时机写入`page cache`，并从`page cache`刷盘到磁盘的`redo log`日志文件里，如下图：
 
 ![img](https://segmentfault.com/img/remote/1460000041758788)
 
-#### 2.2.3 刷盘时机
+#### 7.2.3 刷盘时机
 
 ​	首先，`Innodb`存储引擎的`master thread`，每隔`1`秒，就会把会`redo log buffer`中的内容写入到文件系统缓存`page cache`，然后调用`fsync`刷盘，如下图。因此，即使是没有进行事务提交的`redo log`记录，也会被刷盘。
 
@@ -2566,7 +2575,7 @@ SET SESSION TRANSACTION_ISOLATION = 'SERIALIZABLE';
 
   ![img](https://segmentfault.com/img/remote/1460000041758792)
 
-#### 2.2.4 存储结构
+#### 7.2.4 存储结构
 
 写入redo log buffer 过程
 
@@ -2609,26 +2618,22 @@ SET SESSION TRANSACTION_ISOLATION = 'SERIALIZABLE';
 
 ![image-20240925125439200](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f3978f76c13.png)
 
-真正的redo日志都是存储到占用`496`字节大小的`log block body`中，图中的`log block header`和`log block trailer`存储的是一些管理信息。我们来看看这些所谓`管理信息`都有什么。
+真正的redo日志都是存储到占用`492`字节大小的`log block body`中，图中的`log block header`和`log block trailer`存储的是一些管理信息。我们来看看这些所谓`管理信息`都有什么。
 
 ![image-20240925125506782](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f397ab122a6.png)
 
-- ```
-  log block header
-  ```
-
-  的属分别如下：
+- log block header
+  
+  属性介绍如下：
 
   - `LOG_BL0CK_HDR_NO`: log buffer是由log block组成，在内部log buffer就好似一个数组，因此 LOG_BLOCK_HDR_NO 用来标记这个数组中的位置。其是递增并且循环使用的，占用4个字节，但是由于第一位用来判断是否是flush bit，所以最大的值为2G。
   - `L0G_BL0CK_HDR_DATA_LEN`: 表示block中已经使用了多少字节，初始值为`12`（因为`log block body` 从第12个字节处开始)。随着往block中写入的redo日志越来也多，本属性值也跟着增长。如果`log block body `已经被全部写满，那么本属性的值被设置为`512`。
   - `LOG_BLOCK_FIRST_REC_GROUP`: 一条redo日志也可以称之为一条redo日志记录(redo log record)，一个mtr会生产多条redo日志记录，这些redo日志记录被称之为一个redo日志记录组(redo log record group)。LOG_BLOCK_FIRST_REC_GROUP 就代表该block中第一个mtr生成的redo日志记录组的偏移量（其实也就是这个block里第一个mtr生成的第一条redo日志的偏移量)。如果该值的大小和LOG_BLOCK_HDR_DATA_LEN相同，则表示当前log block不包含新的日志。
   - `L0G_BL0CK_CHECKPOINT_No`：占用4字节，表示该log block最后被写时的`checkpoint`
-
-- ```
-  log block trailer
-  ```
-
-  中属性的意思如下：
+  
+- log block trailer
+  
+  属性介绍如下：
 
   - `LOG_BLOCK_CHECKSUM`: 表示block的校验值，用于正确性校验（其值和LOG_BLOCK_HDR_NO相同），我们暂时不关心它。
 
@@ -2653,7 +2658,7 @@ SET SESSION TRANSACTION_ISOLATION = 'SERIALIZABLE';
 
 - `innodb_flush_log_at_trx_commit`：控制 redo log 刷新到磁盘的策略，默认为1。
 
-- `innodb_log_file_size`：单个 redo log 文件设置大小，默认值为 `48M` 。最大值为512G，注意最大值 指的是整个 redo log 系列文件之和，即（innodb_log_files_in_group * innodb_log_file_size ）不能大 于最大值512G。
+- `innodb_log_file_size`：单个 redo log 文件设置大小，默认值为 `48M` 。最大值为512G，注意最大值指的是整个 redo log 系列文件之和，即（innodb_log_files_in_group * innodb_log_file_size ）不能大于最大值512G。
 
   ```
   mysql> show variables like 'innodb_log_file_size';
@@ -2700,21 +2705,21 @@ innodb_log_file_size=200M
 
 
 
-### 2.3 Bin Log
+### 7.3 Bin Log
 
-#### 2.3.1 概念
+#### 7.3.1 概念
 
-​	`bin log`又叫**二进制日志**，是**逻辑日志**，记录内容是语句的原始逻辑，**属于`MySQL Server`层**。**所有的存储引擎**只要发生了数据更新，都会产生`bin log`日志，`bin log`会记录所有涉及更新数据的逻辑规则，并且**按顺序写**。可以说`MySQL`数据库的数据备份、主备、主主、住从都离不开`bin log`，需要依赖`bin log`来同步数据，保证数据一致性，如下图所示。
+​	`bin log`又叫**二进制日志**，是**逻辑日志**，记录内容是语句的原始逻辑，**属于`MySQL Server`层**。**所有的存储引擎**只要发生了数据更新，都会产生`bin log`日志，`bin log`会记录所有涉及更新数据的逻辑规则，并且**按顺序写**。可以说`MySQL`数据库的数据备份、主备、主主、主从都离不开`bin log`，需要依赖`bin log`来同步数据，保证数据一致性，如下图所示。
 
 ![img](https://segmentfault.com/img/remote/1460000041758796)
 
-#### 2.3.2 写入机制
+#### 7.3.2 写入机制
 
 ​	`binlog`的写入时机为事务执行过程中，先把日志写到`binlog cache`，事务提交的时候再把`binlog cache`写到`binlog`文件中（实际先会写入`page cache`，然后再由`fsync`写入`binlog`文件）。
 
 ​	因为一个事务的`binlog`不能被拆开，无论这个事务多大，也要确保一次性写入，所以系统会给每个线程分配一块内存作为`binlog cache`。可以通过`binlog_cache_size`参数控制单线程`binlog_cache`大小，如果存储内容超过了这个参数，就要暂存到磁盘。
 
-#### 2.3.3 刷盘时机
+#### 7.3.3 刷盘时机
 
 ​	`binlog`日志刷盘流程如下：
 
@@ -2735,7 +2740,7 @@ innodb_log_file_size=200M
 
 ![img](https://segmentfault.com/img/remote/1460000041758801)
 
-#### 2.3.4 存储结构
+#### 7.3.4 存储结构
 
 `binlog`日志有三种格式，可以通过`binlog_format`参数设置，有以下三种：
 
@@ -2743,16 +2748,16 @@ innodb_log_file_size=200M
 - row
 - mixed
 
-##### 2.3.3.1 statement
+##### 7.3.3.1 statement
 
 ​	`statement`记录的内容是`SQL`语句原文，比如执行一条`update T set update_time = now() where id = 1`，记录内容如下：
 ![img](https://segmentfault.com/img/remote/1460000041758797)
 
 ​	同步数据时，会执行记录的`SQL`语句，但是有个问题`update_time = now()`这里会获取到当前系统问题，直接执行会导致与原库数据不一致。
 
-##### 2.3.3.2 row
+##### 7.3.3.2 row
 
-​	`row`不再是简单的`SQL`语句了，还包含了操作的具体数据，但是记录的内容看不到详细信息，需要通过`mysqlbinlog`工具解析出来，这样子就解决了statement格式的问题，我们需要将`binlog_format`设置成`row`，记录的，记录内容如下：，如下图。
+​	`row`不再是简单的`SQL`语句了，还包含了操作的具体数据，但是记录的内容看不到详细信息，需要通过`mysqlbinlog`工具解析出来，这样子就解决了statement格式的问题，我们需要将`binlog_format`设置成`row`，记录的，记录内容如下：
 
 ![img](https://segmentfault.com/img/remote/1460000041758798)
 
@@ -2760,19 +2765,53 @@ innodb_log_file_size=200M
 
 ​	设置成`row`带来的好处就是**同步数据的一致性**，通常情况都设置成`row`，这样可以为数据库的恢复与同步带来更好的可靠性。但是这种格式需要大量的容量来记录，比较**占用空间**，恢复与同步时会**更消耗`IO`资源**，影响执行速度。
 
-##### 2.3.3.3 mixed
+##### 7.3.3.3 mixed
 
 ​	`mixed`记录的内容是前两者的混合。`MySQL`会判断这条`SQL`语句是否会引起数据不一致，如果是就用`row`格式，否则就用`statement`格式。
 
 
 
-### 2.4 Undo Log
+#### 7.3.5 两阶段提交
 
-#### 2.4.1 概念
+在执行更新语句过程，会记录redo log与binlog两块日志，以基本的事务为单位，redo log在事务执行过程中可以不断写入，而binlog只有在提交事务时才写入，所以redo log与binlog的 `写入时机` 不一样。
 
-​	`undo log`是事务**原子性**的保证。在事务中`更新数据`的`前置操作`其实是要先写入一个`undo log`。此外，**`undo log`会产生`redo log`**，也就是`undo log`的产生会伴随着`redo log`的产生，这是因为`undo logt`也需要`持久性`的保护。
+![image-20240926154149931](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f5103e6eaa1.png)
 
-> 每当我们要对一条记录做改动时（这里的`改动`可以指`INSERT`、`DELETE`、`UPDATE`)，都需要"留一手"一一把回 滚时所需的东西记下来。比如：
+**redo log与binlog两份日志之间的逻辑不一致，会出现什么问题？**
+
+以update语句为例，假设`id=2`的记录，字段`c`值是`0`，把字段c值更新为`1`，SQL语句为update T set c = 1 where id = 2。
+
+假设执行过程中写完redo log日志后，binlog日志写期间发生了异常，会出现什么情况呢？
+
+![image-20220715195016492](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f50f1896320.png)
+
+由于binlog没写完就异常，这时候binlog里面没有对应的修改记录。因此，之后用binlog日志恢复数据时，就会少这一次更新，恢复出来的这一行c值为0，而原库因为redo log日志恢复，这一行c的值是1，最终数据不一致。
+
+![image-20220715195521986](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f50f18d3090.png)
+
+为了解决两份日志之间的逻辑一致问题，InnoDB存储引擎使用**两阶段提交**方案。原理很简单，将redo log的写入拆成了两个步骤prepare和commit，这就是**两阶段提交**。
+
+![image-20220715195635196](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f50f1943df9.png)
+
+使用两阶段提交后，写入binlog时发生异常也不会有影响，因为MySQL根据redo log日志恢复数据时，发现redo log还处于prepare阶段，并且没有对应binlog日志，就会回滚该事务。
+
+![image-20220715200248193](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f50f19a4fe9.png)
+
+另一个场景，redo log设置commit阶段发生异常，那会不会回滚事务呢？
+
+![image-20220715200321717](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f50f1985230.png)
+
+并不会回滚事务，它会执行上图框住的逻辑，虽然redo log是处于prepare阶段，但是能通过事务id找到对应的binlog日志，所以MySQL认为是完整的，就会提交事务恢复数据。
+
+
+
+### 7.4 Undo Log
+
+#### 7.4.1 概念
+
+​	`undo log`是事务**原子性**的保证，是一个逻辑日志。在事务中`更新数据`的`前置操作`其实是要先写入一个`undo log`。此外，**`undo log`会产生`redo log`**，也就是`undo log`的产生会伴随着`redo log`的产生，这是因为`undo log`也需要`持久性`的保护。
+
+> 每当我们要对一条记录做改动时（这里的`改动`可以指`INSERT`、`DELETE`、`UPDATE`)，都需要"留一手"一一把回滚时所需的东西记下来。比如：
 >
 > - 当你`插入一条记录`时，至少要把这条记录的主键值记下来，之后回滚的时候只需要把这个主键值对应的记录`删除`就好了。（对于每个INSERT，InnoDB存储引擎会完成一个DELETE)
 > - 当你`删除了一条记录`，至少要把这条记录中的内容都记下来，这样之后回滚时再把由这些内容组成的记录`插入`到表中就好了。（对于每个DELETE，InnoDB存储引擎会执行一个INSERT)
@@ -2780,23 +2819,23 @@ innodb_log_file_size=200M
 >
 > 注意，由于`查询操作` (`SELECT`)并不会修改任何用户记录，所以在查询操作执行时，并`不需要记录`相应的undo日志。
 
-#### 2.4.2 作用
+#### 7.4.2 作用
 
-##### 2.4.2.1 回滚数据
+##### 7.4.2.1 回滚数据
 
 ​	`undo log`是**逻辑日志**，因此只是将数据库逻辑地恢复到原来的样子。所有修改都被逻辑地取消了，但是**数据结构和页本身在回滚之后可能大不相同**。
 
 > 这是因为在多用户并发系统中，可能会有数十、数百甚至数千个并发事务。数据库的主要任务就是协调对数据记录的并发访问。比如，一个事务在修改当前一个页中某几条记录，同时还有别的事务在对同一个页中另几条记录进行修改。因此，不能将一个页回滚到事务开始的样子，因为这样会影响其他事务正在进行的工作。
 
-##### 2.4.2.2 MVCC
+##### 7.4.2.2 MVCC
 
 ​	undo log的另一个作用是MVCC，即在InnoDB存储引擎中MVCC的实现是通过undo来完成。当用户读取一行记录时，若该记录以及被其他事务占用，当前事务可以通过undo读取之前的行版本信息，以此实现非锁定读取。
 
-#### 2.4.3 存储结构
+#### 7.4.3 存储结构
 
 
 
 
 
-## 3. 多版本并发控制（MVCC）
+## 8. 多版本并发控制（MVCC）
 
