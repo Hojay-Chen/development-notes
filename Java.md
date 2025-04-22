@@ -2,6 +2,367 @@
 
 
 
+# 一、序列化和反序列化
+
+## 1. 介绍
+
+### 1.1 概述
+
+**Java序列化**是指将Java对象转换成字节流，以便存储在文件中或在网络上传输
+
+**Java反序列化**是指将字节流转换成Java对象。
+
+### 1.2 应用场景
+
+- **实现数据持久化**（保存对象及其状态到内存或磁盘）
+
+  Java 平台允许我们在内存中创建可复用的 Java 对象，但一般情况下，只有当 JVM 处于运行时，这些对象才可能存在，即，这些对象的生命周期不会比 JVM 的生命周期更长。但在现实应用中，就可能要求在 JVM 停止运行之后能够保存(持久化)指定的对象，并在将来重新读取被保存的对象。Java 对象序列化就能够帮助我们实现该功能。
+
+- **实现远程通信**
+
+  除了在持久化对象时会用到对象序列化之外，当使用 RMI(远程方法调用)，或在网络中传递对象时，都会用到对象序列化。Java 序列化 API 为处理对象序列化提供了一个标准机制，该 API 简单易用。
+
+- **实现对象的传递**
+
+  通过序列化在进程间传递对象。
+
+> **场景举例：**
+>
+> - **序列化输出到文件**
+>
+> Web 服务器中的 Session 会话对象，当有10万用户并发访问，就有可能出现10万个 Session 对象，显然这种情况内存可能是吃不消的。于是 Web 容器就会把一些 Session 先序列化，让他们离开内存空间，序列化到硬盘中，当需要调用时，再把保存在硬盘中的对象还原到内存中。
+>
+> - **序列化输出到网络**
+>
+> 我们知道，当两个进程进行远程通信时，彼此可以发送各种类型的数据，包括文本、图片、音频、视频等， 而这些数据都会以二进制序列的形式在网络上传送。同样的序列化与反序列化则实现了 **进程通信间的对象传送**，发送方需要把这个Java对象转换为字节序列，才能在网络上传送；接收方则需要把字节序列再恢复为Java对象。
+
+### 1.3 序列化协议
+
+- XML&SOAP
+
+- JSON
+
+- Protobuf
+
+
+
+## 2. 序列化的使用
+
+### 2.1 JDK提供的序列化API
+
+- java.io.ObjectOutputStream：表示对象输出流，它的writeObject(Object obj)方法可以对参数指定的obj对象进行序列化，把得到的字节序列写到一个目标输出流中。
+- java.io.ObjectInputStream：表示对象输入流，它的readObject()方法源输入流中读取字节序列，再把它们反序列化成为一个对象，并将其返回。
+
+在Java中， 只有实现了**Serializable接口**或者**Externalizable接口**的类的对象才能被序列化为字节序列。
+
+### 2.2 序列化API的使用方式
+
+- 若User类仅仅实现了Serializable接口，则可以按照以下方式进行序列化和反序列化。
+
+　　ObjectOutputStream采用默认的序列化方式，对User对象的非transient的实例变量进行序列化。
+　　ObjcetInputStream采用默认的反序列化方式，对对User对象的非transient的实例变量进行反序列化。
+
+- 若User类不仅实现了Serializable接口，并且还定义了readObject(ObjectInputStream in)和writeObject(ObjectOutputSteam out)，则采用以下方式进行序列化与反序列化。
+
+　　ObjectOutputStream调用User对象的writeObject(ObjectOutputStream out)的方法进行序列化。
+　　ObjectInputStream会调用User对象的readObject(ObjectInputStream in)的方法进行反序列化。
+
+- 若User类实现了Externalnalizable接口，且User类必须实现readExternal(ObjectInput in)和writeExternal(ObjectOutput out)方法，则按照以下方式进行序列化与反序列化。
+
+　　ObjectOutputStream调用User对象的writeExternal(ObjectOutput out))的方法进行序列化。
+　　ObjectInputStream会调用User对象的readExternal(ObjectInput in)的方法进行反序列化。
+
+
+
+## 2. 序列化实现
+
+### 2.1 Serializable接口
+
+#### 2.1.1 `Serializable` 接口的作用
+
+1. **标记可序列化**
+
+   实现 `Serializable` 接口的类表明其对象可以被序列化。序列化机制会检查对象的类是否实现了 `Serializable` 接口，如果没有实现，会抛出 `NotSerializableException` 异常。
+
+   示例：
+
+   ```java
+   public class Person implements Serializable {
+       private String name;
+       private int age;
+   
+       public Person(String name, int age) {
+           this.name = name;
+           this.age = age;
+       }
+   }
+   ```
+
+2. **控制序列化过程**
+
+   虽然 `Serializable` 接口本身没有方法，但通过实现特定的方法（如 `writeObject` 和 `readObject`），可以自定义序列化和反序列化的过程。
+
+
+
+#### 2.1.2 序列化和反序列化的原理
+
+1. **序列化**
+
+- **对象输出流**
+
+  使用 `java.io.ObjectOutputStream` 类将对象写入到输出流中。输出流可以是文件输出流（`FileOutputStream`）、内存输出流（`ByteArrayOutputStream`）或其他类型的输出流。
+
+  示例：
+
+  ```java
+  try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("person.ser"))) {
+      Person person = new Person("Alice", 30);
+      oos.writeObject(person);
+  } catch (IOException e) {
+      e.printStackTrace();
+  }
+  ```
+
+- **序列化过程**
+
+  1. **检查对象是否可序列化**
+
+     如果对象的类没有实现 `Serializable` 接口，会抛出 `NotSerializableException` 异常。
+
+  2. **遍历对象图**
+
+     序列化机制会递归地遍历对象图，记录对象的引用关系，避免重复序列化。
+
+  3. **处理类元数据**
+
+     序列化机制会将对象所属类的元数据（如类名、`serialVersionUID`、字段信息等）写入到输出流中。
+
+  4. **处理字段值**
+
+     序列化机制会按照字段声明的顺序将字段值写入到输出流中。`transient` 修饰的字段不会被序列化。
+
+  5. **自定义序列化**
+
+     如果类中定义了 `private void writeObject(ObjectOutputStream out) throws IOException` 方法，序列化机制会调用这个方法，而不是默认的序列化逻辑。
+
+     
+
+2. **反序列化**
+
+- **对象输入流**
+
+  使用 `java.io.ObjectInputStream` 类从输入流中读取对象。输入流可以是文件输入流（`FileInputStream`）、内存输入流（`ByteArrayInputStream`）或其他类型的输入流。
+
+  示例：
+
+  ```java
+  try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("person.ser"))) {
+      Person person = (Person) ois.readObject();
+      System.out.println(person);
+  } catch (IOException | ClassNotFoundException e) {
+      e.printStackTrace();
+  }
+  ```
+
+- **反序列化过程**
+
+  1. **读取类元数据**
+
+     反序列化机制会从输入流中读取类元数据，查找对应的类。如果类未加载，会尝试加载。
+
+  2. **检查版本兼容性**
+
+     比较输入流中的 `serialVersionUID` 和当前类的 `serialVersionUID`。如果不一致，会抛出 `InvalidClassException` 异常。
+
+  3. **创建对象实例**
+
+     反序列化机制会通过一种特殊的机制创建对象实例，而不是调用构造方法。
+
+  4. **字段赋值**
+
+     根据输入流中的字段值，按照字段声明的顺序将值赋给对象的字段。`transient` 修饰的字段会被赋予默认值。
+
+  5. **自定义反序列化**
+
+     如果类中定义了 `private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException` 方法，反序列化机制会调用这个方法，而不是默认的反序列化逻辑。
+
+     
+
+#### 2.1.3 `serialVersionUID`
+
+1. **作用**
+
+   `serialVersionUID` 是一个静态常量字段，用于标识类的版本。在反序列化时，序列化机制会检查输入流中的 `serialVersionUID` 和当前类的 `serialVersionUID` 是否一致。如果不一致，会抛出 `InvalidClassException` 异常。
+
+   示例：
+
+   ```java
+   private static final long serialVersionUID = 1L;
+   ```
+
+   
+
+2. **生成方式**
+
+   **显式定义**：在类中显式定义 `serialVersionUID`，推荐使用这种方式，可以避免因类结构变化导致的版本不兼容问题。
+
+   **自动生成**：如果不显式定义，JVM 会根据类的结构（如类名、字段、方法等）自动生成一个 `serialVersionUID`。但这种方式在类结构发生变化时，生成的 `serialVersionUID` 也可能改变。
+
+3. **版本兼容性**
+
+   如果类的结构发生变化（如添加、删除字段或修改字段类型），显式定义的 `serialVersionUID` 可以保持不变，从而确保反序列化时不会因版本不一致而失败。
+
+   
+
+#### 2.1.4 自定义序列化和反序列化
+
+1. **自定义序列化**
+
+   如果需要在序列化过程中对字段值进行特殊处理（如加密、压缩等），可以实现 `private void writeObject(ObjectOutputStream out) throws IOException` 方法。
+
+   示例：
+
+   ```java
+   private void writeObject(ObjectOutputStream out) throws IOException {
+       out.defaultWriteObject(); // 调用默认的序列化逻辑
+       out.writeInt(age); // 自定义序列化age字段
+   }
+   ```
+
+   
+
+2. **自定义反序列化**
+
+   如果需要在反序列化过程中对字段值进行特殊处理（如解密、解压缩等），可以实现 `private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException` 方法。
+
+   示例：
+
+   ```java
+   private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+       in.defaultReadObject(); // 调用默认的反序列化逻辑
+       age = in.readInt(); // 自定义反序列化age字段
+   }
+   ```
+
+   
+
+#### 2.1.5 `transient` 关键字
+
+1. **作用**
+
+   `transient` 修饰的字段不会被序列化。这通常用于标记那些不需要持久化的临时数据或敏感信息。
+
+   示例：
+
+   ```java
+   private transient int tempValue;
+   ```
+
+   **反序列化时的行为**
+
+   在反序列化时，`transient` 修饰的字段会被赋予默认值（如基本类型字段为0，对象类型字段为`null`）。
+
+#### 2.1.6 注意事项
+
+1. **安全性**
+
+   序列化机制可能会暴露类的内部实现细节，存在一定的安全隐患。可以通过 `transient` 关键字保护敏感字段，但无法完全避免安全问题。
+
+   如果需要更高的安全性，可以实现 `Externalizable` 接口，自定义 `writeExternal` 和 `readExternal` 方法，对字段值进行加密处理。
+
+2. **性能**
+
+   默认的序列化机制可能会生成较大的字节流，性能相对较低，尤其是在处理复杂对象图时。
+
+   如果对性能有较高要求，可以考虑使用其他序列化框架（如 `JSON` 序列化、`protobuf` 序列化等）。
+
+3. **版本兼容性**
+
+   序列化和反序列化时需要保证类的版本一致（通过 `serialVersionUID`）。如果类的结构发生变化（如添加或删除字段），可能会导致反序列化失败。
+
+   如果需要向后兼容，可以在类中显式定义 `serialVersionUID`，并在类结构发生变化时，通过自定义 `readObject` 方法处理字段的兼容性问题。
+
+#### 2.1.7 示例代码
+
+以下是一个完整的序列化和反序列化示例代码：
+
+```java
+import java.io.*;
+
+public class SerializationExample {
+    public static void main(String[] args) {
+        Person person = new Person("Alice", 30);
+
+        // 序列化
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("person.ser"))) {
+            oos.writeObject(person);
+            System.out.println("对象已成功序列化到文件 person.ser");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // 反序列化
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("person.ser"))) {
+            Person deserializedPerson = (Person) ois.readObject();
+            System.out.println("反序列化后的对象: " + deserializedPerson);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+class Person implements Serializable {
+   
+```
+
+
+
+### 2.2 Externalizable接口
+
+**功能**
+
+- `Externalizable`接口继承自`Serializable`接口，但它提供了更强大的自定义能力。
+- 实现`Externalizable`接口的类需要实现两个方法：`writeExternal`和`readExternal`。这两个方法允许开发者完全控制序列化和反序列化的过程。
+- 序列化机制不会自动处理字段，而是完全依赖于`writeExternal`和`readExternal`方法的实现。
+
+**灵活性**
+
+- **高度自定义**：开发者可以决定哪些字段需要序列化，以及如何序列化这些字段。例如，可以在序列化前对字段值进行加密或压缩，反序列化时再解密或解压缩。
+- **字段选择性序列化**：可以只序列化部分字段，而不是所有字段，从而提高存储效率。
+
+**使用方式**
+
+- 类必须实现`Externalizable`接口，并实现`writeExternal`和`readExternal`方法。
+- 在`writeExternal`方法中，需要显式地将需要序列化的字段写入到`ObjectOutput`对象中。
+- 在`readExternal`方法中，需要显式地从`ObjectInput`对象中读取字段值并赋值给对象的字段。
+- 类必须有一个无参构造方法，因为在反序列化时会通过无参构造方法创建对象实例。
+
+**性能和存储效率**
+
+- 由于完全由开发者控制序列化过程，可以优化字段的序列化方式，从而生成更小的字节流。
+- 性能通常优于默认的`Serializable`机制，尤其是在处理复杂对象时。
+
+**安全性**
+
+- 由于可以完全控制序列化和反序列化的过程，可以更好地保护敏感数据。例如，可以在`writeExternal`方法中对敏感字段进行加密处理。
+- 但开发者需要确保`writeExternal`和`readExternal`方法的实现是安全的，避免引入新的安全漏洞。
+
+
+
+## 3. 序列化ID
+
+private static final long serialVersionUID = 1L;
+
+### 3.1 介绍
+
+序列化ID其实就是用来验证序列化的对象和反序列化对应的对象的ID是否是一致的。所以这个ID的数字其实不重要，无论是1L还是idea自动生成的，只要序列化的时候对象的serialVersionUID和反序列化的时候对象的serialVersionUID一致的话就行。
+
+serialVersionUID就是起验证作用，，可以认为是一个指纹。所以如果没有为类定义一个serialVersionUID然后列化一个对象之后，反序列化之前把对象的类的结构改了，比如增加了一个成员变量，则此时的反序列化会失败。因为类的结构变了，生成的指纹就变了，所以serialVersionUID就不一致了。
+
+# 4. 
+
+
+
 # 一、Java容器
 
 
@@ -126,37 +487,6 @@ t1 等待 10 分钟后，就自动唤醒，拥有了去争夺锁的资格。
 #### 1.2.2 RUNNABLE->BLOCK
 
 - `synchronized` 块或方法：当多个线程尝试获取同一把锁时，未获取到锁的线程将被阻塞。
-
->三种形式：
->
->1. synchronized修饰的代码块
->
->  ```java
->Object o = new Object();
->synchronized(o) {
->    //...
->}
->  ```
->
->
->
->2. synchronized修饰的非静态方法
->
->  ```java
->public synchronized void set() {}
->  ```
->
->
->
->3. synchronized修饰的静态方法
->
->
->
->
->
->
->
->
 
 - `ReentrantLock.lock()`：尝试获取锁，如果锁被其他线程持有，则当前线程被阻塞。
 

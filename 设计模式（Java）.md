@@ -446,9 +446,9 @@ public class Client {
 ## 4. 使用方式
 
 （1）Target：目标接口，客户端所期望的接口。
-（2）Client：客户端，与符合 Target 接口的对象协同工作。
-（3）Adaptee：被适配的类，需要被适配的现有类，它可能有一个不同的接口。
-（4）Adapter：适配器类，它负责将 Adaptee 的接口转换成 Target 接口。
+（2）Adaptee：被适配的类，需要被适配的现有类，它可能有一个不同的接口。
+（3）Adapter：适配器类，它负责将 Adaptee 的接口转换成 Target 接口。
+（4）Client：客户端，与符合 Target 接口的对象协同工作。
 
 ## 5. 分类
 
@@ -466,7 +466,7 @@ public class Client {
 
 (以SpringMVC的HandlerAdapter源码为示例)
 
-```
+```java
 // Target 接口
 public interface HandlerAdapter{
     void handle(HttpServletRequest request, HttpServletResponse response, Object handler);
@@ -484,7 +484,7 @@ public class HttpRequestHandlerAdapter implements HandlerAdapter{
     public HttpRequestHandlerAdapter() {}
     @Override
     void handle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        (HttpRequestHandler handler).handleRequest(request, response);
+        ((HttpRequestHandler)handler).handleRequest(request, response);
     }
 }
 

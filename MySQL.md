@@ -2533,6 +2533,8 @@ SET SESSION TRANSACTION_ISOLATION = 'SERIALIZABLE';
 
 ![MySQL高频八股——事务过程中undolog、redolog、binlog的写入顺序（涉及两阶段提交）](https://picx.zhimg.com/70/v2-fe1e5401b53ebde013e929491aeda1d6_1440w.image?source=172ae18b&biz_tag=Post)
 
+（注意上图更新为Prepare和Commit状态的是redo log，不是undo log）
+
 ### 7.2 Redo Log
 
 #### 7.2.1 概念
@@ -2809,15 +2811,7 @@ innodb_log_file_size=200M
 
 #### 7.4.1 概念
 
-​	`undo log`是事务**原子性**的保证，是一个逻辑日志。在事务中`更新数据`的`前置操作`其实是要先写入一个`undo log`。此外，**`undo log`会产生`redo log`**，也就是`undo log`的产生会伴随着`redo log`的产生，这是因为`undo log`也需要`持久性`的保护。
-
-> 每当我们要对一条记录做改动时（这里的`改动`可以指`INSERT`、`DELETE`、`UPDATE`)，都需要"留一手"一一把回滚时所需的东西记下来。比如：
->
-> - 当你`插入一条记录`时，至少要把这条记录的主键值记下来，之后回滚的时候只需要把这个主键值对应的记录`删除`就好了。（对于每个INSERT，InnoDB存储引擎会完成一个DELETE)
-> - 当你`删除了一条记录`，至少要把这条记录中的内容都记下来，这样之后回滚时再把由这些内容组成的记录`插入`到表中就好了。（对于每个DELETE，InnoDB存储引擎会执行一个INSERT)
-> - 当你`修改了一条记录`，至少要把修改这条记录前的旧值都记录下来，这样之后回滚时再把这条记录`更新为旧值`就好了。（对于每个UPDATE，InnoDB存储引擎会执行一个相反的UPDATE，将修改前的行放回去）
->
-> 注意，由于`查询操作` (`SELECT`)并不会修改任何用户记录，所以在查询操作执行时，并`不需要记录`相应的undo日志。
+​	`undo log`是事务**原子性**的保证，是一个**逻辑日志**。在事务中`更新数据`的`前置操作`其实是要先写入一个`undo log`。此外，**`undo log`会产生`redo log`**，也就是`undo log`的产生会伴随着`redo log`的产生，这是因为`undo log`也需要`持久性`的保护。
 
 #### 7.4.2 作用
 
@@ -2831,11 +2825,263 @@ innodb_log_file_size=200M
 
 ​	undo log的另一个作用是MVCC，即在InnoDB存储引擎中MVCC的实现是通过undo来完成。当用户读取一行记录时，若该记录以及被其他事务占用，当前事务可以通过undo读取之前的行版本信息，以此实现非锁定读取。
 
+#### 7.4.3 生命周期
+
+##### 7.4.3.1 生成过程
+
+>**隐藏字段**
+>
+>对于InnoDB引擎来说，每个行记录除了记录本身的数据之外，还有几个隐藏的列：
+>
+>- `DB_ROW_ID`: 如果没有为表显式的定义主键，并且表中也没有定义唯一索引，那么InnoDB会自动为表添加一 个row_id的隐藏列作为主键。
+>- `DB_TRX_ID`: 每个事务都会分配一个事务ID,当对某条记录发生变更时，就会将这个事务的事务ID写入trx_id中。
+>- `DB_ROLL_PTR`:回滚指针，本质上就是指向undo log的指针。
+>
+>![image-20240925140424684](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f3a7e8dfb55.png)
+
+**当我们执行INSERT时：**
+
+```
+begin;
+INSERT INTO user (name) VALUES ("tom");
+```
+
+插入的数据都会生成一条insert undo log，并且数据的回滚指针会指向它。undo log会记录undo log的序号、插入主键的列和值...，那么在进行rollback的时候，通过主键直接把对应的数据删除即可。
+
+![image-20240925140530862](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f3a82b16488.png)
+
+**当我们执行UPDATE时：**
+
+对应更新的操作会产生update undo log，并且会分更新主键和不更新主键的，假设现在执行：
+
+```
+UPDATE user SET name="Sun" WHERE id=1;
+```
+
+![image-20240925140607905](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f3a8501faf7.png)
+
+这时会把老的记录写入新的undo log，让回滚指针指向新的undo log，它的undo no是1，并且新的undo log会指向老的undo log（undo no=0）。
+
+假设现在执行：
+
+```
+UPDATE user SET id=2 WHERE id=1;
+```
+
+![image-20240925140825594](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f3a8d9cd721.png)
+
+对于更新主键的操作，会先把原来的数据`deletemark`标识打开，这时并没有真正的删除数据，真正的删除会交给清理线程去判断，然后在后面插入一条新的数据，新的数据也会产生undo log，并且undo log的序号会递增。
+
+可以发现每次对数据的变更都会产生一个undo log，当一条记录被变更多次时，那么就会产生多条undo log，undo log记录的是变更前的日志，并且每个undo log的序号是递增的，那么当要回滚的时候，按照序号`依次向前推`，就可以找到我们的原始数据了。
+
+##### 7.4.3.2 回滚过程
+
+以上面的例子来说，假设执行rollback，那么对应的流程应该是这样：
+
+1. 通过undo no=3的日志把id=2的数据删除
+2. 通过undo no=2的日志把id=1的数据的deletemark还原成0
+3. 通过undo no=1的日志把id=1的数据的name还原成Tom
+4. 通过undo no=0的日志把id=1的数据删除
+
+##### 7.4.3.3 删除过程
+
+- 针对于insert undo log
+
+  因为insert操作的记录，只对事务本身可见，对其他事务不可见。故该undo log可以在事务提交后直接删除，不需要进行purge操作。
+
+- 针对于update undo log
+
+  该undo log可能需要提供MVCC机制，因此不能在事务提交时就进行删除。提交时放入undo log链表，等待purge线程进行最后的删除。
+
 #### 7.4.3 存储结构
 
+**回滚段与undo页**
 
+InnoDB对undo log的管理采用段的方式，也就是 `回滚段（rollback segment）` 。每个回滚段记录了 `1024` 个 `undo log segment` ，而在每个undo log segment段中进行 `undo页` 的申请。
+
+- 在` InnoDB1.1版本之前` （不包括1.1版本），只有一个rollback segment，因此支持同时在线的事务限制为 `1024` 。虽然对绝大多数的应用来说都已经够用。
+- 从1.1版本开始InnoDB支持最大 `128个rollback segment` ，故其支持同时在线的事务限制提高到 了 `128*1024` 。
+
+```
+mysql> show variables like 'innodb_undo_logs';
++------------------+-------+
+| Variable_name    | Value |
++------------------+-------+
+| innodb_undo_logs | 128   |
++------------------+-------+
+```
+
+虽然InnoDB.1.1版本支持了128个rollback segment,但是这些rollback segment都存储于共享表空间ibdata中。
+
+从 InnoDB1.2版本开始，可通过参数对rollback segment做进一步的设置。这些参数包括：
+
+- `innodb_undo_directory`: 设置rollback segment文件所在的路径。这意味着rollback segment可以存放在共享表空间以外的位置，即可以设置为独立表空间。该参数的默认值为`./`，表示当前InnoDB存储引擎的目
+- `innodb_undo_logs`: 设置rollback segment的个数，默认值为128。在InnoDB1.2版本中，该参数用来替换之前版本的参数innodb_rollback_segments。
+- `innodb_undo_tablespaces`：设置构成rollback segment文件的数量，这样rollback segment可以较为平均地 分布在多个文件中。设置该参数后，会在路径innodb_undo_directory看到undo为前缀的文件，该文件就代表 rollback segment文件。
+
+undo log相关参数一般很少改动。
+
+**undo页的重用**
+
+当我们开启一个事务需要写undo log的时候，就得先去undo log segment中去找到一个空闲的位置，当有空位的时候，就去申请undo页，在这个申请到的undo页中进行undo log的写入。我们知道mysql默认一页的大小是16k。
+
+> 为每一个事务分配一个页，是非常浪费的（除非你的事务非常长），假设你的应用的TPS(每秒处理的事务数目)为1000，那么1s就需要1000个页，大概需要16M的存储，1分钟大概需要1G的存储。如果照这样下去除非MySQL清理的非常勤快，否则随着时间的推移，磁盘空间会增长的非常快，而且很多空间都是浪费的。
+
+于是undo页就被设计的`可以重用`了，当事务提交时，并不会立刻删除undo页。因为重用，所以这个undo页可能混杂着其他事务的undo log。undo log在commit后，会被放到一个`链表`中，然后判断undo页的使用空间是否小于`3/4`,如果小于3/4的话，则表示当前的undo页可以被重用，那么它就不会被回收，其他事务的undo log可以记录 在当前undo页的后面。由于undo log是`离散的`，所以清理对应的磁盘空间时，效率不高。
+
+**回滚段与事务**
+
+1. 每个事务只会使用一个回滚段，一个回滚段在同一时刻可能会服务于多个事务。
+
+2. 当一个事务开始的时候，会制定一个回滚段，在事务进行的过程中，当数据被修改时，原始的数据会被复制到回滚段。
+
+3. 在回滚段中，事务会不断填充盘区，直到事务结束或所有的空间被用完。如果当前的盘区不够用，事务会在段中请求扩展下一个盘区，如果所有已分配的盘区都被用完，事务会覆盖最初的盘区或者在回滚段允许的情况下扩展新的盘区来使用。
+
+4. 回滚段存在于undo表空间中，在数据库中可以存在多个undo表空间，但同一时刻只能使用一个 undo表空间。
+
+   ```
+   mysql> show variables like 'innodb_undo_tablespaces';
+   +-------------------------+-------+
+   | Variable_name           | Value |
+   +-------------------------+-------+
+   | innodb_undo_tablespaces | 2     |
+   +-------------------------+-------+
+   # undo log的数量，最少为2. undo log的truncate操作有purge协调线程发起。在truncate某个undo log表空间的过程中，保证有一个可用的undo log可用。
+   ```
+
+5. 当事务提交时，InnoDB存储引擎会做以下两件事情：
+
+   - 将undo log放入列表中，以供之后的purge操作
+   - 判断undo log所在的页是否可以重用，若可以则分配给下个事务使用
+
+**回滚段中的数据分类**
+
+1. `未提交的回滚数据(uncommitted undo information)`：该数据所关联的事务并未提交，用于实现读一致性，所以该数据不能被其他事务的数据覆盖。
+2. `已经提交但未过期的回滚数据(committed undo information)`：该数据关联的事务已经提交，但是仍受到undo retention参数的保持时间的影响。
+3. `事务已经提交并过期的数据(expired undo information)`：事务已经提交，而且数据保存时间已经超过 undo retention参数指定的时间，属于已经过期的数据。当回滚段满了之后，就优先覆盖“事务已经提交并过期的数据"。
+
+事务提交后不能马上删除undo log及undo log所在的页。这是因为可能还有其他事务需要通过undo log来得到行记录之前的版本。故事务提交时将undo log放入一个链表中，是否可以最终删除undo log以undo log所在页由purge线程来判断。
 
 
 
 ## 8. 多版本并发控制（MVCC）
+
+### 8.1 概述
+
+MVCC （Multiversion Concurrency Control），多版本并发控制。MVCC 是通过数据行的多个版本管理来实现数据库的 `并发控制 `。这项技术使得在InnoDB的事务隔离级别下执行 `一致性读` 操作有了保证。换言之，就是为了查询一些正在被另一个事务更新的行，并且可以看到它们被更新之前的值，这样在做查询的时候就不用等待另一个事务释放锁。
+
+MVCC 的实现依赖于：`隐藏字段`、`Undo Log`、`Read View`。
+
+隐藏字段帮助存储记录相关的事务信息，包括最近更新数据的事务id和指向Undo Log版本链的指针，Undo Log保存了历史快照，通过产生该日志的事务的ID进行区别，Read View规则帮我们判断当前版本的数据是否可见。
+
+### 8.2 相关概念
+
+#### 8.2.1 隐藏字段
+
+[[隐藏字段介绍](#####7.4.3.1 生成过程)]
+
+#### 8.2.2 Undo Log
+
+[[Undo Log生成结构介绍](#####7.4.3.1 生成过程)]
+
+#### 8.2.3 ReadView
+
+##### 8.2.3.1 概述
+
+在MVCC机制中，多个事务对同一个行记录进行更新会产生多个历史快照，这些历史快照保存在Undo Log里。如果一个事务想要查询这个行记录，需要读取哪个版本的行记录呢？这时就需要用到ReadView了，**它帮我们解决了行的可见性问题。**
+
+**ReadView就是某一具体事务在使用MVCC机制进行快照读操作时产生的读视图**。当事务启动时，会生成数据库系统当前的一个快照，InnoDB为每个事务构造了一个数组，用来记录并维护系统当前`活跃事务`的ID(“活跃”指的就是，启动了但还没提交)。
+
+##### 8.2.3.2 结构
+
+> **活跃的事务**
+>
+> “活跃”指的就是，启动了但还没提交
+
+这个ReadView中主要包含4个比较重要的内容，分别如下：
+
+1. `creator_trx_id` ，创建这个 Read View 的事务 ID。
+
+   > 说明：只有在对表中的记录做改动时（执行INSERT、DELETE、UPDATE这些语句时）才会为 事务分配事务id，否则在一个只读事务中的事务id值都默认为0。
+
+2. `trx_ids` ，表示在生成ReadView时当前系统中活跃的读写事务的 `事务id列表`。
+
+3. `up_limit_id` ，活跃的事务中最小的事务 ID。
+
+4. `low_limit_id` ，表示生成ReadView时系统中应该分配给下一个事务的 id 值。low_limit_id 是**系统最大的事务id值**，这里要注意是系统中的事务id，需要区别于正在活跃的事务ID。
+
+##### 8.2.3.3 生成时机
+
+-  每当一个`REPEATABLE READ`事务启动时，只在第一次 SELECT 的时候会获取一次 Read View，而后面所有的 SELECT 都会复用这个 Read View。
+
+  ![image-20240926122418461](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f4e1f2d50ce.png)
+
+- 在`READ COMMITED`事务中，每一次 SELECT 查询都会生成一个专属于该查询操作的ReadView。 
+
+  如表所示：
+
+  | 事务                                | 说明             |
+  | ----------------------------------- | ---------------- |
+  | begin;                              |                  |
+  | select * from student where id>2;   | 获取一次ReadView |
+  | ...                                 |                  |
+  | select * from student where id > 2; | 获取一次ReadView |
+  | commit;                             |                  |
+
+  > 注意，此时同样的查询语句都会重新获取一次 Read View，这时如果 Read View 不同，就可能产生不可重复读或者幻读的情况。
+
+
+
+### 8.3 设计思路
+
+使用 `READ UNCOMMITTED` 隔离级别的事务，由于可以读到未提交事务修改过的记录，所以直接读取记录的最新版本就好了。
+
+使用 `SERIALIZABLE` 隔离级别的事务，InnoDB规定使用加锁的方式来访问记录。
+
+使用 `READ COMMITTED` 和 `REPEATABLE READ` 隔离级别的事务，都必须保证读到 `已经提交了的` 事务修改过的记录。假如另一个事务已经修改了记录但是尚未提交，是不能直接读取最新版本的记录的，核心问题就是需要判断一下版本链中的哪个版本是当前事务可见的，这是ReadView要解决的主要问题，具体判断规则如下：
+
+- 如果被访问版本的trx_id属性值与ReadView中的 creator_trx_id 值相同，意味着当前事务在访问它自己修改过的记录，所以该版本可以被当前事务访问。
+- 如果被访问版本的trx_id属性值小于ReadView中的 up_limit_id 值，表明生成该版本的事务在当前事务生成ReadView前已经提交，所以该版本可以被当前事务访问。
+- 如果被访问版本的trx_id属性值大于或等于ReadView中的 low_limit_id 值，表明生成该版本的事务在当前事务生成ReadView后才开启，所以该版本不可以被当前事务访问。
+- 如果被访问版本的trx_id属性值在ReadView的 up_limit_id 和 low_limit_id 之间，那就需要判断一下trx_id属性值是不是在 trx_ids 列表中。
+  - 如果在，说明创建ReadView时生成该版本的事务还是活跃的，该版本不可以被访问。
+  - 如果不在，说明创建ReadView时生成该版本的事务已经被提交，该版本可以被访问。
+
+
+
+### 8.4 整体流程
+
+（1）首先获取事务自己的版本号，也就是事务 ID；
+
+（2）获取 ReadView；
+
+（3）查询得到的数据，然后与 ReadView 中的事务版本号进行比较；
+
+（4）如果不符合 ReadView 规则，就需要从 Undo Log 中获取历史快照；
+
+（5）最后返回符合规则的数据。
+
+如果某个版本的数据对当前事务不可见的话，那就顺着版本链找到下一个版本的数据，继续按照上边的步骤判断 可见性，依此类推，直到版本链中的最后一个版本。如果最后一个版本也不可见的话，那么就意味着该条记录对 该事务完全不可见，查询结果就不包含该记录。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
