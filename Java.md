@@ -293,11 +293,11 @@ serialVersionUID就是起验证作用，可以认为是一个指纹。所以如�
 
 
 
-# 一、Java容器
+# 二、Java容器
 
 
 
-# 二、Java并发编程
+# 三、Java并发编程
 
 ## 1. 线程运行状态
 
@@ -894,7 +894,7 @@ Unsafe 对 CAS 的实现是通过 C++ 实现的，它的具体实现和操作系
 
 ```java
 Unsafe unsafe = Unsage.getUnsafe();
-public boolean update(Object o, long offset, int delta) {
+public boolean add(Object o, long offset, int delta) {
     int v;
     do {
         v = unsafe.getIntVolatile(o, offset);
@@ -1224,50 +1224,99 @@ public static Penguin getInstance() {
 
 #### 6.2.1 底层原理
 
+##### 6.2.1.1 Monitor机制详解
+Monitor是synchronized实现互斥的核心，当使用synchronized时，JVM会通过**Monitor（管程）**实现互斥，其核心结构如下：
+
+```c++
+class Monitor {
+    Thread* owner;          // 持有锁的线程
+    EntryList* entrySet;    // 阻塞等待锁的线程队列
+    WaitSet* waitSet;       // 调用wait()后的等待队列
+    int recursions;         // 重入次数计数器
+};
+```
+
+执行流程：
+
+- 线程通过monitorenter指令尝试获取Monitor所有权。
+
+- 若Owner为空，则当前线程成为Owner，recursions=1。
+- 若Owner是当前线程，recursions++（可重入性）。
+- 竞争失败则进入EntryList阻塞等待。
+
+
+Monitor其完整结构在JVM源码（如objectMonitor.hpp）中定义如下：
+
+```c++
+class ObjectMonitor {
+    void*     _header;        // 对象头（存储Mark Word）
+    void*     _owner;         // 持有锁的线程指针
+    volatile intptr_t  _recursions; // 重入次数
+    ObjectWaiter* _EntryList; // 竞争锁的线程队列（阻塞态）
+    ObjectWaiter* _WaitSet;   // 调用wait()后的线程队列（等待态）
+    volatile int _WaitSetLock;// 保护WaitSet的锁
+    // ... 其他字段省略
+};
+```
+
+关键队列说明：
+
+- EntryList
+  - 当线程A持有锁时，线程B尝试获取锁失败，会被封装为ObjectWaiter节点加入EntryList，并进入BLOCKED状态。
+  - 唤醒规则：锁释放时，JVM会从EntryList中选择线程（非公平模式下可能直接唤醒最新竞争者）。
+
+- WaitSet
+  - 当线程调用wait()方法后，线程会释放锁并进入WaitSet，状态变为WAITING。
+  - 唤醒条件：其他线程调用notify()/notifyAll()后，线程从WaitSet转移到EntryList重新竞争锁。
+
+
+
 `synchronized`关键字可以保证并发编程的三大特性：原子性、可见性、有序性，而`volatile`关键字只能保证可见性和有序性，不能保证原子性，也称为是轻量级的`synchronized`。
-
-synchronized 就是可重入锁，因此一个线程调用 synchronized 方法的同时，在其方法体内部调用该对象另一个 synchronized 方法是允许的，如下：
-
-> 从互斥锁的设计上来说，当一个线程试图操作一个由其他线程持有的对象锁的临界资源时，将会处于阻塞状态，但当一个线程再次请求自己持有对象锁的临界资源时，这种情况属于重入锁，请求将会成功。
-
-```
-public class AccountingSync implements Runnable{
-    static AccountingSync instance=new AccountingSync();
-    static int i=0;
-    static int j=0;
-
-    @Override
-    public void run() {
-        for(int j=0;j<1000000;j++){
-            //this,当前实例对象锁
-            synchronized(this){
-                i++;
-                increase();//synchronized的可重入性
-            }
-        }
-    }
-
-    public synchronized void increase(){
-        j++;
-    }
-
-    public static void main(String[] args) throws InterruptedException {
-        Thread t1=new Thread(instance);
-        Thread t2=new Thread(instance);
-        t1.start();t2.start();
-        t1.join();t2.join();
-        System.out.println(i);
-    }
-}
-```
 
 **重量级锁**
 
 
 
-
-
 #### 6.2.2 使用教程
+
+synchronized 就是**可重入锁**，因此一个线程调用 synchronized 方法的同时，在其方法体内部调用该对象另一个 synchronized 方法是允许的。
+
+> 从互斥锁的设计上来说，当一个线程试图操作一个由其他线程持有的对象锁的临界资源时，将会处于阻塞状态，但当一个线程再次请求自己持有对象锁的临界资源时，这种情况属于重入锁，请求将会成功。
+>
+> 代码示例：
+>
+> ```java
+> public class AccountingSync implements Runnable{
+>     static AccountingSync instance=new AccountingSync();
+>     static int i=0;
+>     static int j=0;
+> 
+>     @Override
+>     public void run() {
+>         for(int j=0;j<1000000;j++){
+>             //this,当前实例对象锁
+>             synchronized(this){
+>                 i++;
+>                 increase();//synchronized的可重入性
+>             }
+>         }
+>     }
+> 
+>     public synchronized void increase(){
+>         j++;
+>     }
+> 
+>     public static void main(String[] args) throws InterruptedException {
+>         Thread t1=new Thread(instance);
+>         Thread t2=new Thread(instance);
+>         t1.start();t2.start();
+>         t1.join();t2.join();
+>         System.out.println(i);
+>     }
+> }
+> ```
+
+
 
 synchronized 关键字最主要有以下 3 种应用方式：
 
@@ -1490,7 +1539,7 @@ public class AccountingSync2 implements Runnable {
 
 
 
-# 三、JVM
+# 四、JVM
 
 ## 1. JVM内存结构<a id="JVM内存结构"></a>
 
