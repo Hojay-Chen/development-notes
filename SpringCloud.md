@@ -21,7 +21,7 @@ Spring Cloud Alibaba Nacos下载网址：[Releases · alibaba/nacos](https://git
 找到文件夹下的包含startup.cmd的bin目录，在该目录下执行命令：
 
 ```
-startup.cmd -m standalone
+.\startup.cmd -m standalone
 ```
 
 **Linux/Unix/Mac系统**
@@ -185,7 +185,7 @@ public class CouponController {
 
 ### 5.1 使用详解
 
-- 配置中心的配置项优先于
+- 配置中心的配置项优先于项目本地的配置文件。
 
 ### 5.2 引入依赖详解
 
@@ -214,30 +214,44 @@ Nacos配置中心的配置信息在配置文件boostrap.yml / boostrap.propertie
 1. **`server-addr`**：
    - 指定 Nacos 配置中心的地址。可以是单个地址或地址列表，用于服务发现。
    - 示例：`server-addr=127.0.0.1:8848`
+
 2. **`namespace`**（命名空间）：
-   - 用于隔离不同环境的配置。不同的命名空间可以包含相同的配置项，但是值不同。当需要在多套配置项来回切换，则只需要为每一套配置项定义在不同配置空间，通过修改namespace的值来切换配置项。默认值为public。
+   - 默认值为public。
+   - 用于隔离不同环境的配置。不同的命名空间可以包含相同的配置项，但是值不同。当需要在多套配置项来回切换，则只需要为每一套配置项定义在不同配置空间，通过修改namespace的值来切换配置项。例如可以创建三个命名空间分别为开发、测试、生产，并且每一个命名空间对应一套配置项，分别在开发、测试、生产时使用，从而隔离了不同环境下的配置项的使用。
    - 示例：`namespace=public`
+
 3. **`group`**（分组）：
-   - 指定配置项所属的分组。分组可以帮助组织和隔离不同应用或模块的配置。默认值为DEFAULT_GROUP。
+
+   - 默认值为DEFAULT_GROUP。
+
+   - 指定配置项所属的分组。分组可以帮助组织和隔离不同应用或模块的配置。
    - 示例：`group=DEFAULT_GROUP`
+
 4. **`file-extension`**：
+
    - 指定从 Nacos 配置中心加载的配置文件的文件扩展名。常见的扩展名有 `.properties` 和 `.yml`。默认值为properties。
    - 示例：`file-extension=yaml`
+
 5. **`enabled`**：
    - 指定是否启用 Nacos 配置管理功能。默认值为true。
    - 示例：`enabled=true` 或 `enabled=false`
+
 6. **`refresh-enabled`**：
    - 指定是否允许配置的动态刷新功能。如果为true，那么使用了@RefreshScope注解的类中的配置项的调用可以在 Nacos 配置中心的配置发生变化时，应用程序会自动刷新配置。如果为false，那么无论是否添加@RefreshScope注解，都无法进行自动刷新配置。默认值为true。
    - 示例：`refresh-enabled=true`
+
 7. ~~**`config-import`**：~~
    - ~~指定从 Nacos 配置中心加载的配置项。可以指定配置文件的 `dataId` 或者使用通配符 `*` 来加载所有配置。~~
    - ~~示例：`config-import=nacos:gulimall-coupon.yml`~~
+
 8. ~~**`context-path`**：~~
    - ~~指定配置项的上下文路径，用于组织配置项。~~
    - ~~示例：`context-path=application`~~
+
 9. ~~**`timeout`**：~~
    - ~~指定从 Nacos 配置中心获取配置的超时时间（以毫秒为单位）。~~
    - ~~示例：`timeout=5000`~~
+
 10. ~~**`max-retries`**：~~
     - ~~指定从 Nacos 配置中心获取配置失败时的最大重试次数。~~
     - ~~示例：`max-retries=3`~~
@@ -335,3 +349,20 @@ public class Application {
 
 
 
+# 三、Gateway
+
+## 1. 介绍
+
+
+
+## 2. 核心概念
+
+* **路由（Route）**：这是网关的基石。路由由一个ID、一个目标地址（URI）、一组断言（Predicates）和一组过滤器（Filters）组成。当所有断言组合起来的结果为“真”的时候，这条路由就会被匹配到。
+* **断言（Predicate）**：这是基于Java 8的函数式判断。它的输入是Spring框架中的ServerWebExchange对象。你可以用它来检查HTTP请求中的任何内容，比如请求头或者请求参数，看看它们是否符合你设定的条件。
+* **过滤器（Filter）**：这些是通过特定工厂创建的GatewayFilter实例。你可以在把请求发送到下游服务之前或者收到下游服务的响应之后，用过滤器来修改请求或者响应的内容。
+
+
+
+## 3. 运行原理
+
+![spring_cloud_gateway_cbskja](E:\各种资料\Java开发笔记\我的笔记\images\spring_cloud_gateway_cbskja.png)
