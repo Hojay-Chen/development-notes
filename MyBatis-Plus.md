@@ -269,8 +269,7 @@ int insert(T entity);
 | ---- | ------ | -------- |
 | T    | entity | 实体对象 |
 
-
-    #### Delete方法
+#### Delete方法
 
 ```Java
 // 根据 entity 条件，删除记录
@@ -293,8 +292,7 @@ int deleteByMap(@Param(Constants.COLUMN_MAP) Map<String, Object> columnMap);
 | Serializable                       | id        | 主键 ID                              |
 | Map<String, Object>                | columnMap | 表字段 map 对象                      |
 
-
-    #### Update方法
+#### Update方法
 
 ```Java
 // 根据 whereWrapper 条件，更新记录
@@ -310,8 +308,7 @@ int updateById(@Param(Constants.ENTITY) T entity);
 | T          | entity        | 实体对象 (set 条件值,可为 null)                              |
 | Wrapper<T> | updateWrapper | 实体对象封装操作类（可以为 null,里面的 entity 用于生成 where 语句） |
 
-
-    #### Select方法
+#### Select方法
 
 ```Java
 // 根据 ID 查询
@@ -345,7 +342,7 @@ IPage<Map<String, Object>> selectMapsPage(IPage<T> page, @Param(Constants.WRAPPE
 Integer selectCount(@Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
 ```
 
-    参数说明
+参数说明
 
 | 类型                               | 参数名       | 描述                                     |
 | ---------------------------------- | ------------ | ---------------------------------------- |
@@ -355,10 +352,9 @@ Integer selectCount(@Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
 | Map<String, Object>                | columnMap    | 表字段 map 对象                          |
 | IPage<T>                           | page         | 分页查询条件（可以为 RowBounds.DEFAULT） |
 
+#### 自定义和多表映射
 
-    #### 自定义和多表映射
-    
-    mybatis-plus的默认mapperxml位置
+mybatis-plus的默认mapperxml位置
 
 ```YAML
 mybatis-plus: # mybatis-plus的配置
@@ -366,7 +362,7 @@ mybatis-plus: # mybatis-plus的配置
   mapper-locations: classpath:/mapper/*.xml
 ```
 
-    自定义mapper方法：
+自定义mapper方法：
 
 ```Java
 public interface UserMapper extends BaseMapper<User> {
@@ -378,7 +374,7 @@ public interface UserMapper extends BaseMapper<User> {
 
 ```
 
-    基于mapper.xml实现：
+基于mapper.xml实现：
 
 ```XML
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -396,16 +392,16 @@ public interface UserMapper extends BaseMapper<User> {
 
   ### 2.2 基于Service接口CRUD
 
-    通用 Service CRUD 封装[IService (opens new window)](https://gitee.com/baomidou/mybatis-plus/blob/3.0/mybatis-plus-extension/src/main/java/com/baomidou/mybatisplus/extension/service/IService.java)接口，进一步封装 CRUD 采用 `get 查询单行` `remove 删除` `list 查询集合` `page 分页` 前缀命名方式区分 `Mapper` 层避免混淆，
-    
-    #### 对比Mapper接口CRUD区别：
-    
-    - service添加了批量方法
-    - service层的方法自动添加事务
-    
-    #### 使用Iservice接口方式
-    
-    接口继承IService接口
+通用 Service CRUD 封装[IService (opens new window)](https://gitee.com/baomidou/mybatis-plus/blob/3.0/mybatis-plus-extension/src/main/java/com/baomidou/mybatisplus/extension/service/IService.java)接口，进一步封装 CRUD 采用 `get 查询单行` `remove 删除` `list 查询集合` `page 分页` 前缀命名方式区分 `Mapper` 层避免混淆，
+
+#### 对比Mapper接口CRUD区别：
+
+- service添加了批量方法
+- service层的方法自动添加事务
+
+#### 使用Iservice接口方式
+
+接口继承IService接口
 
 ```Java
 public interface UserService extends IService<User> {
@@ -413,7 +409,7 @@ public interface UserService extends IService<User> {
 
 ```
 
-    类继承ServiceImpl实现类
+类继承ServiceImpl实现类
 
 ```Java
 @Service
@@ -423,7 +419,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper,User> implements Use
 
 ```
 
-    #### CRUD方法介绍
+#### CRUD方法介绍
 
 ```Java
 保存：
@@ -509,7 +505,7 @@ List<Object> listObjs(Wrapper<T> queryWrapper);
 ```
 
   ### 2.3 分页查询实现
-    1. 导入分页插件
+1. 导入分页插件
 
 ```Java
 @Bean
@@ -519,7 +515,7 @@ public MybatisPlusInterceptor mybatisPlusInterceptor() {
     return interceptor;
 }
 ```
-    2. 使用分页查询
+2. 使用分页查询
 
 ```Java
 @Test
@@ -538,9 +534,9 @@ public void testPageQuery(){
     System.out.println("是否有下一页："+page.hasNext());
 }
 ```
-    3. 自定义的mapper方法使用分页
-    
-        方法
+3. 自定义的mapper方法使用分页
+
+    方法
 
 ```Java
 //传入参数携带Ipage接口
@@ -549,7 +545,7 @@ IPage<User> selectPageVo(IPage<?> page, Integer id);
 
 ```
 
-        接口实现
+​    接口实现
 
 ```Java
 <select id="selectPageVo" resultType="xxx.xxx.xxx.User">
@@ -557,7 +553,7 @@ IPage<User> selectPageVo(IPage<?> page, Integer id);
 </select>
 ```
 
-        测试
+​    测试
 
 ```Java
 @Test
@@ -581,9 +577,9 @@ public void testQuick(){
 
   ### 2.4 条件构造器使用
 
-    #### 2.4.1 条件构造器作用
-    
-      实例代码：
+#### 2.4.1 条件构造器作用
+
+  实例代码：
 
 ```Java
 QueryWrapper<User> queryWrapper = new QueryWrapper<>();
@@ -597,28 +593,28 @@ delete from user where name = "John" and age != 30
 int delete(@Param(Constants.WRAPPER) Wrapper<T> wrapper);
 ```
 
-      使用MyBatis-Plus的条件构造器，你可以构建灵活、高效的查询条件，而不需要手动编写复杂的 SQL 语句。它提供了许多方法来支持各种条件操作符，并且可以通过链式调用来组合多个条件。这样可以简化查询的编写过程，并提高开发效率。
-    
-    #### 2.4.2 条件构造器继承结构
-    
-      条件构造器类结构：
-    
-      ![](https://secure2.wostatic.cn/static/6rDhDVtj1MxY5vpwSFPo7y/image.png?auth_key=1745544133-4QxfBi7aZmwWU2UdTzac1h-0-82d70fc3ef0b80556883f6abab55a52f)
-    
-      Wrapper ： 条件构造抽象类，最顶端父类
-    
-      - AbstractWrapper ： 用于查询条件封装，生成 sql 的 where 条件
-          - QueryWrapper ： 查询/删除条件封装
-          - UpdateWrapper ： 修改条件封装
-          - AbstractLambdaWrapper ： 使用Lambda 语法
-              - LambdaQueryWrapper ：用于Lambda语法使用的查询Wrapper
-              - LambdaUpdateWrapper ： Lambda 更新封装Wrapper
-    
-    #### 2.4.3 基于QueryWrapper 组装条件
-    
-      ![](https://secure2.wostatic.cn/static/pypDBsh99aubzMoetXxDbA/image.png?auth_key=1745544134-u36Ur33Vy7anycgHnXiGQ-0-32835f3ca040c5ed9d75bd1584fd0339)
-    
-      组装查询条件：
+  使用MyBatis-Plus的条件构造器，你可以构建灵活、高效的查询条件，而不需要手动编写复杂的 SQL 语句。它提供了许多方法来支持各种条件操作符，并且可以通过链式调用来组合多个条件。这样可以简化查询的编写过程，并提高开发效率。
+
+#### 2.4.2 条件构造器继承结构
+
+  条件构造器类结构：
+
+  ![](https://secure2.wostatic.cn/static/6rDhDVtj1MxY5vpwSFPo7y/image.png?auth_key=1745544133-4QxfBi7aZmwWU2UdTzac1h-0-82d70fc3ef0b80556883f6abab55a52f)
+
+  Wrapper ： 条件构造抽象类，最顶端父类
+
+  - AbstractWrapper ： 用于查询条件封装，生成 sql 的 where 条件
+      - QueryWrapper ： 查询/删除条件封装
+      - UpdateWrapper ： 修改条件封装
+      - AbstractLambdaWrapper ： 使用Lambda 语法
+          - LambdaQueryWrapper ：用于Lambda语法使用的查询Wrapper
+          - LambdaUpdateWrapper ： Lambda 更新封装Wrapper
+
+#### 2.4.3 基于QueryWrapper 组装条件
+
+  ![](https://secure2.wostatic.cn/static/pypDBsh99aubzMoetXxDbA/image.png?auth_key=1745544134-u36Ur33Vy7anycgHnXiGQ-0-32835f3ca040c5ed9d75bd1584fd0339)
+
+  组装查询条件：
 
 ```Java
 @Test
@@ -634,7 +630,7 @@ public void test01(){
 
 ```
 
-      组装排序条件:
+  组装排序条件:
 
 ```Java
 @Test
@@ -650,7 +646,7 @@ public void test02(){
 }
 ```
 
-      组装删除条件:
+  组装删除条件:
 
 ```Java
 @Test
@@ -665,7 +661,7 @@ public void test03(){
 }
 ```
 
-      and和or关键字使用(修改)：
+  and和or关键字使用(修改)：
 
 ```Java
 @Test
@@ -686,7 +682,7 @@ public void test04() {
 }
 ```
 
-      指定列映射查询：
+  指定列映射查询：
 
 ```Java
 @Test
@@ -701,7 +697,7 @@ public void test05() {
 }
 ```
 
-      condition判断组织条件:
+  condition判断组织条件:
 
 ```Java
  @Test
@@ -729,9 +725,9 @@ public void testQuick3(){
 }
 ```
 
-    #### 2.3.4 基于 UpdateWrapper组装条件
-    
-      使用queryWrapper:
+#### 2.3.4 基于 UpdateWrapper组装条件
+
+  使用queryWrapper:
 
 ```Java
 @Test
@@ -752,9 +748,9 @@ public void test04() {
 }
 ```
 
-      注意：使用queryWrapper + 实体类形式可以实现修改，但是无法将列值修改为null值！
-    
-      使用updateWrapper:
+  注意：使用queryWrapper + 实体类形式可以实现修改，但是无法将列值修改为null值！
+
+  使用updateWrapper:
 
 ```Java
 @Test
@@ -772,16 +768,15 @@ public void testQuick2(){
 }
 ```
 
-      使用updateWrapper可以随意设置列的值！！
+  使用updateWrapper可以随意设置列的值！！
 
 
-​      
 
-    #### 2.3.5 基于LambdaQueryWrapper组装条件
-    
-      1. **LambdaQueryWrapper对比QueryWrapper优势**
-    
-      QueryWrapper 示例代码：
+#### 2.3.5 基于LambdaQueryWrapper组装条件
+
+  1. **LambdaQueryWrapper对比QueryWrapper优势**
+
+  QueryWrapper 示例代码：
 
 ```Java
 QueryWrapper<User> queryWrapper = new QueryWrapper<>();
@@ -792,7 +787,7 @@ queryWrapper.eq("name", "John")
 List<User> userList = userMapper.selectList(queryWrapper);
 ```
 
-      LambdaQueryWrapper 示例代码：
+  LambdaQueryWrapper 示例代码：
 
 ```Java
 LambdaQueryWrapper<User> lambdaQueryWrapper = new LambdaQueryWrapper<>();
@@ -804,31 +799,31 @@ lambdaQueryWrapper.eq(User::getName, "John")
 List<User> userList = userMapper.selectList(lambdaQueryWrapper);
 ```
 
-      从上面的代码对比可以看出，相比于 QueryWrapper，LambdaQueryWrapper 使用了实体类的属性引用（例如 `User::getName`、`User::getAge`），而不是字符串来表示字段名，这提高了代码的可读性和可维护性。
+  从上面的代码对比可以看出，相比于 QueryWrapper，LambdaQueryWrapper 使用了实体类的属性引用（例如 `User::getName`、`User::getAge`），而不是字符串来表示字段名，这提高了代码的可读性和可维护性。
 
 
 ​      
 
-      2. **lambda表达式回顾**
-    
-      Lambda 表达式是 Java 8 引入的一种函数式编程特性，它提供了一种更简洁、更直观的方式来表示匿名函数或函数式接口的实现。Lambda 表达式可以用于简化代码，提高代码的可读性和可维护性。
-    
-      Lambda 表达式的语法可以分为以下几个部分：
-    
-      1. **参数列表：** 参数列表用小括号 `()` 括起来，可以指定零个或多个参数。如果没有参数，可以省略小括号；如果只有一个参数，可以省略小括号。
-    
-          示例：`(a, b)`, `x ->`, `() ->`
-      2. **箭头符号：** 箭头符号 `->` 分割参数列表和 Lambda 表达式的主体部分。
-    
-          示例：`->`
-      3. **Lambda 表达式的主体：** Lambda 表达式的主体部分可以是一个表达式或一个代码块。如果是一个表达式，可以省略 return 关键字；如果是多条语句的代码块，需要使用大括号 `{}` 括起来，并且需要明确指定 return 关键字。
-    
-          示例：
-    
-          - 单个表达式：`x -> x * x`
-          - 代码块：`(x, y) -> { int sum = x + y; return sum; }`
-    
-      Lambda 表达式的语法可以更具体地描述如下：
+  2. **lambda表达式回顾**
+
+  Lambda 表达式是 Java 8 引入的一种函数式编程特性，它提供了一种更简洁、更直观的方式来表示匿名函数或函数式接口的实现。Lambda 表达式可以用于简化代码，提高代码的可读性和可维护性。
+
+  Lambda 表达式的语法可以分为以下几个部分：
+
+  1. **参数列表：** 参数列表用小括号 `()` 括起来，可以指定零个或多个参数。如果没有参数，可以省略小括号；如果只有一个参数，可以省略小括号。
+
+      示例：`(a, b)`, `x ->`, `() ->`
+  2. **箭头符号：** 箭头符号 `->` 分割参数列表和 Lambda 表达式的主体部分。
+
+      示例：`->`
+  3. **Lambda 表达式的主体：** Lambda 表达式的主体部分可以是一个表达式或一个代码块。如果是一个表达式，可以省略 return 关键字；如果是多条语句的代码块，需要使用大括号 `{}` 括起来，并且需要明确指定 return 关键字。
+
+      示例：
+
+      - 单个表达式：`x -> x * x`
+      - 代码块：`(x, y) -> { int sum = x + y; return sum; }`
+
+  Lambda 表达式的语法可以更具体地描述如下：
 
 ```Java
 // 使用 Lambda 表达式实现一个接口的方法
@@ -860,18 +855,18 @@ public class LambdaExample {
 }
 ```
 
-      **3. 方法引用回顾:**
-    
-      方法引用是 Java 8 中引入的一种语法特性，它提供了一种简洁的方式来直接引用已有的方法或构造函数。方法引用可以替代 Lambda 表达式，使代码更简洁、更易读。
-    
-      Java 8 支持以下几种方法引用的形式：
-    
-      1. **静态方法引用：** 引用静态方法，语法为 `类名::静态方法名`。
-      2. **实例方法引用：** 引用实例方法，语法为 `实例对象::实例方法名`。
-      3. **对象方法引用：** 引用特定对象的实例方法，语法为 `类名::实例方法名`。
-      4. **构造函数引用：** 引用构造函数，语法为 `类名::new`。
-    
-      演示代码:
+  **3. 方法引用回顾:**
+
+  方法引用是 Java 8 中引入的一种语法特性，它提供了一种简洁的方式来直接引用已有的方法或构造函数。方法引用可以替代 Lambda 表达式，使代码更简洁、更易读。
+
+  Java 8 支持以下几种方法引用的形式：
+
+  1. **静态方法引用：** 引用静态方法，语法为 `类名::静态方法名`。
+  2. **实例方法引用：** 引用实例方法，语法为 `实例对象::实例方法名`。
+  3. **对象方法引用：** 引用特定对象的实例方法，语法为 `类名::实例方法名`。
+  4. **构造函数引用：** 引用构造函数，语法为 `类名::new`。
+
+  演示代码:
 
 ```Java
 import java.util.Arrays;
@@ -889,7 +884,7 @@ public class MethodReferenceExample {
 }
 ```
 
-      **4. lambdaQueryWrapper使用案例:**
+  **4. lambdaQueryWrapper使用案例:**
 
 ```Java
 @Test
@@ -914,9 +909,9 @@ public void testQuick4(){
 }
 ```
 
-    #### 2.3.6 基于LambdaUpdateWrapper组装条件
-    
-      使用案例:
+#### 2.3.6 基于LambdaUpdateWrapper组装条件
+
+  使用案例:
 
 ```Java
 @Test
@@ -941,13 +936,13 @@ public void testQuick2(){
 ```
 
   ### 2.5 核心注解使用
-    1. 理解和介绍
-    
-        MyBatis-Plus是一个基于MyBatis框架的增强工具，提供了一系列简化和增强的功能，用于加快开发人员在使用MyBatis进行数据库访问时的效率。
-    
-        MyBatis-Plus提供了一种基于注解的方式来定义和映射数据库操作，其中的注解起到了重要作用。
-    
-        理解：
+1. 理解和介绍
+
+    MyBatis-Plus是一个基于MyBatis框架的增强工具，提供了一系列简化和增强的功能，用于加快开发人员在使用MyBatis进行数据库访问时的效率。
+
+    MyBatis-Plus提供了一种基于注解的方式来定义和映射数据库操作，其中的注解起到了重要作用。
+
+    理解：
 
 ```Java
 public interface UserMapper extends BaseMapper<User> {
@@ -955,18 +950,19 @@ public interface UserMapper extends BaseMapper<User> {
 }
 ```
 
-        此接口对应的方法为什么会自动触发 user表的crud呢？
-    
-        默认情况下， 根据指定的<实体类>的名称对应数据库表名，属性名对应数据库的列名！
-    
-        但是不是所有数据库的信息和实体类都完全映射！
-    
-        例如： 表名 t_user  → 实体类 User 这时候就不对应了！
-    
-        自定义映射关系就可以使用mybatis-plus提供的注解即可！
-    2. @TableName注解
-        - 描述：表名注解，标识实体类对应的表
-        - 使用位置：实体类
+此接口对应的方法为什么会自动触发 user表的crud呢？
+
+默认情况下， 根据指定的<实体类>的名称对应数据库表名，属性名对应数据库的列名！
+
+但是不是所有数据库的信息和实体类都完全映射！
+
+例如： 表名 t_user  → 实体类 User 这时候就不对应了！
+
+自定义映射关系就可以使用mybatis-plus提供的注解即可！
+
+2. @TableName注解
+    - 描述：表名注解，标识实体类对应的表
+    - 使用位置：实体类
 
 ```Java
 @TableName("sys_user") //对应数据库表名
@@ -979,9 +975,9 @@ public class User {
 
 ```
 
-        特殊情况：如果表名和实体类名相同（忽略大小写）可以省略该注解！
-    
-        其他解决方案：全局设置前缀 ([https://www.baomidou.com/pages/56bac0/#基本配置](https://www.baomidou.com/pages/56bac0/#基本配置))
+特殊情况：如果表名和实体类名相同（忽略大小写）可以省略该注解！
+
+其他解决方案：全局设置前缀 ([https://www.baomidou.com/pages/56bac0/#基本配置](https://www.baomidou.com/pages/56bac0/#基本配置))
 
 ```YAML
 mybatis-plus: # mybatis-plus的配置
@@ -989,9 +985,9 @@ mybatis-plus: # mybatis-plus的配置
     db-config:
       table-prefix: sys_ # 表名前缀字符串
 ```
-    3. @TableId 注解
-        - 描述：主键注解
-        - 使用位置：实体类主键字段
+3. @TableId 注解
+    - 描述：主键注解
+    - 使用位置：实体类主键字段
 
 ```Java
 @TableName("sys_user")
@@ -1010,16 +1006,14 @@ public class User {
 | value | String | 否       | ""          | 主键字段名   |
 | type  | Enum   | 否       | IdType.NONE | 指定主键类型 |
 
-
-        [IdType](https://github.com/baomidou/mybatis-plus/blob/3.0/mybatis-plus-annotation/src/main/java/com/baomidou/mybatisplus/annotation/IdType.java)属性可选值：
+​    [IdType](https://github.com/baomidou/mybatis-plus/blob/3.0/mybatis-plus-annotation/src/main/java/com/baomidou/mybatisplus/annotation/IdType.java)属性可选值：
 
 | 值                | 描述                                                         |
 | ----------------- | ------------------------------------------------------------ |
 | AUTO              | 数据库 ID 自增 (mysql配置主键自增长)                         |
 | ASSIGN_ID（默认） | 分配 ID(主键类型为 Number(Long )或 String)(since 3.3.0),使用接口`IdentifierGenerator`的方法`nextId`(默认实现类为`DefaultIdentifierGenerator`雪花算法) |
 
-
-        全局配置修改主键策略:
+​    全局配置修改主键策略:
 
 ```Java
 mybatis-plus:
@@ -1034,38 +1028,38 @@ mybatis-plus:
       id-type: auto
 ```
 
-        在以下场景下，添加`@TableId`注解是必要的：
+    在以下场景下，添加`@TableId`注解是必要的：
     
-        1. 实体类的字段与数据库表的主键字段不同名：如果实体类中的字段与数据库表的主键字段不一致，需要使用`@TableId`注解来指定实体类中表示主键的字段。
-        2. 主键生成策略不是默认策略：如果需要使用除了默认主键生成策略以外的策略，也需要添加`@TableId`注解，并通过`value`属性指定生成策略。
-    4. 雪花算法使用场景
-    
-        雪花算法（Snowflake Algorithm）是一种用于生成唯一ID的算法。它由Twitter公司提出，用于解决分布式系统中生成全局唯一ID的需求。
-    
-        在传统的自增ID生成方式中，使用单点数据库生成ID会成为系统的瓶颈，而雪花算法通过在分布式系统中生成唯一ID，避免了单点故障和性能瓶颈的问题。
-    
-        雪花算法生成的ID是一个64位的整数，由以下几个部分组成：
-    
-        1. 时间戳：41位，精确到毫秒级，可以使用69年。
-        2. 节点ID：10位，用于标识分布式系统中的不同节点。
-        3. 序列号：12位，表示在同一毫秒内生成的不同ID的序号。
-    
-        通过将这三个部分组合在一起，雪花算法可以在分布式系统中生成全局唯一的ID，并保证ID的生成顺序性。
-    
-        雪花算法的工作方式如下：
-    
-        1. 当前时间戳从某一固定的起始时间开始计算，可以用于计算ID的时间部分。
-        2. 节点ID是分布式系统中每个节点的唯一标识，可以通过配置或自动分配的方式获得。
-        3. 序列号用于记录在同一毫秒内生成的不同ID的序号，从0开始自增，最多支持4096个ID生成。
-    
-        需要注意的是，雪花算法依赖于系统的时钟，需要确保系统时钟的准确性和单调性，否则可能会导致生成的ID不唯一或不符合预期的顺序。
-    
-        雪花算法是一种简单但有效的生成唯一ID的算法，广泛应用于分布式系统中，如微服务架构、分布式数据库、分布式锁等场景，以满足全局唯一标识的需求。
-    
-        **你需要记住的: 雪花算法生成的数字,需要使用Long 或者 String类型主键!!**
-    5. @TableField
-    
-        描述：字段注解（非主键）
+    1. 实体类的字段与数据库表的主键字段不同名：如果实体类中的字段与数据库表的主键字段不一致，需要使用`@TableId`注解来指定实体类中表示主键的字段。
+    2. 主键生成策略不是默认策略：如果需要使用除了默认主键生成策略以外的策略，也需要添加`@TableId`注解，并通过`value`属性指定生成策略。
+4. 雪花算法使用场景
+
+    雪花算法（Snowflake Algorithm）是一种用于生成唯一ID的算法。它由Twitter公司提出，用于解决分布式系统中生成全局唯一ID的需求。
+
+    在传统的自增ID生成方式中，使用单点数据库生成ID会成为系统的瓶颈，而雪花算法通过在分布式系统中生成唯一ID，避免了单点故障和性能瓶颈的问题。
+
+    雪花算法生成的ID是一个64位的整数，由以下几个部分组成：
+
+    1. 时间戳：41位，精确到毫秒级，可以使用69年。
+    2. 节点ID：10位，用于标识分布式系统中的不同节点。
+    3. 序列号：12位，表示在同一毫秒内生成的不同ID的序号。
+
+    通过将这三个部分组合在一起，雪花算法可以在分布式系统中生成全局唯一的ID，并保证ID的生成顺序性。
+
+    雪花算法的工作方式如下：
+
+    1. 当前时间戳从某一固定的起始时间开始计算，可以用于计算ID的时间部分。
+    2. 节点ID是分布式系统中每个节点的唯一标识，可以通过配置或自动分配的方式获得。
+    3. 序列号用于记录在同一毫秒内生成的不同ID的序号，从0开始自增，最多支持4096个ID生成。
+
+    需要注意的是，雪花算法依赖于系统的时钟，需要确保系统时钟的准确性和单调性，否则可能会导致生成的ID不唯一或不符合预期的顺序。
+
+    雪花算法是一种简单但有效的生成唯一ID的算法，广泛应用于分布式系统中，如微服务架构、分布式数据库、分布式锁等场景，以满足全局唯一标识的需求。
+
+    **你需要记住的: 雪花算法生成的数字,需要使用Long 或者 String类型主键!!**
+5. @TableField
+
+    描述：字段注解（非主键）
 
 ```Java
 @TableName("sys_user")

@@ -22,16 +22,84 @@ Redis（Remote Dictionary Server  远程字典服务器）是一个开源的内�
 
 ### 1.1 底层实现原理
 
-Redis中的String数据结构底层原理是通过简单动态字符串（SDS）来实现的。简单动态字符串是Redis自己实现的一种字符串类型，与C语言的字符串相比，它具有更多的功能和优势。 
+Redis中的String类型底层实现主要基于SDS (Simple Dynamic String简单动态字符串)结构，并结合int、embstr、raw 等不同的编码方式进行优化存储。
 
-[[Redis 的 string 底层实现原理详解](https://www.mianshiya.com/bank/1791375592078610434/question/1780933295681335298#heading-4)]
+SDS底层结构是sdshdr,在redis 4.x及以上版本引入了sdshdr变种，如sdshdr16、sdshdr64 等,根据字符串长度动态选择不同的实现，进一步优化内存使用。
 
-**优势**：
+**SDS结构**
 
-- **常数时间复杂度的字符串长度获取**：通过`len`字段可以直接获取字符串长度，而C字符串需要遍历整个字符串来计算长度。
-- **空间分配优化**：SDS会预先分配额外的空间（`alloc - len`），减少字符串扩展时的内存分配次数。
-- **二进制安全**：SDS可以存储任意二进制数据，而C字符串以`'\0'`作为结束标志，无法存储包含`'\0'`的二进制数据。
-- **兼容性**：SDS保留了C字符串的大部分特性，方便在Redis内部使用。
+```c
+struct __attribute__ ((__packed__)) sdshdr64 {
+    uint64_t len; /* used */
+    uint64_t alloc; /* excluding the header and null terminator */
+    unsigned char flags; /* 3 lsb of type, 5 unused bits */
+    char buf[];
+};
+```
+
+- len (长度) :记禄SDS字符串数组的长度, 当需要获取字符串长度的时候，只需要返回这个成员变量的值就可以了时间复杂度是0(1)。
+
+- alloc (分配空间长度) :这 个字段的主要作用是指分配给字符数组的存储的空间大小，当需要计算剩余空间大小的时候，只需要alloc - len就可以直接进行计算,然后判断空间大小是否符合修改需求,如果不满足需求的话，就执行相应的修改操作,这样的话就可以很好地解决我们上面所说的缓冲区溢出问题。
+
+- flags (示SDS的类型) -共设计了五种类型的SDS,分别是sdshdr 5、sdshdr 8、sdshdr 16、sdshdr 32、sdshdr 64 (这个的记忆也很简单，就是32开始，128, 即2的多少次方去记忆就可以了)，通过使用不同存储类型的结构题， 灵活保存不同大小的字符串,从而节省内存空间。
+
+- buf (存储数据的字符数组) :主要起到保存数据的作用,如字符串、二进制数据(二 进制安全就是一个重要原因)等。
+
+**不同的编码选择**
+
+- int编码：如果一个字符串可以被解析为证书，并且整数值比较小，Redis会直接使用整数编码。
+
+  ```c
+  struct redisObject {
+      unsigned type:4;      // 数据类型（字符串、哈希等）
+      unsigned encoding:4;  // 编码类型（int、embstr、raw等）
+      int64_t ptr;          // 实际的数据指针，这里直接存储整数值
+  };
+  ```
+
+  比如直接存储123，则：
+
+  ![redis_string_nvodabo](E:\各种资料\Java开发笔记\我的笔记\images\redis_string_nvodabo.png)
+
+- embstr编码：当字符串长度比较短（小于等于44字节），Redis会使用embstr编码，这种编码将所有的字符串相关结构体和字符串数据存放在连续的内存块中，分配内存的时候，只需要分配一次，减少内存分配和管理的开销。
+
+  ```c
+  struct redisObject {
+      unsigned type:4;       // 数据类型
+      unsigned encoding:4;   // 编码类型，这里是 embstr
+      void *ptr;             // 指向 sdshdr 结构
+  };
+  
+  struct sdshdr {
+      uint32_t len;          // 当前字符串长度
+      uint32_t alloc;        // 已分配的内存大小
+      unsigned char flags;   // 编码类型
+      char buf[];            // 实际字符串数据
+  };
+  ```
+
+  ![redis_string_onqbf](E:\各种资料\Java开发笔记\我的笔记\images\redis_string_onqbf.png)
+
+- row编码：当字符串长度超过44字节时，Redis会使用raw编码，这种编码方式将结构体和实际字符串数据分开存储，以便处理更长的数据。
+
+  > redis4.0版本及之后的版本，这个界限是44，前面版本是39。
+
+  ```c
+  struct redisObject {
+      unsigned type:4;       // 数据类型
+      unsigned encoding:4;   // 编码类型，这里是 raw
+      void *ptr;             // 指向 sdshdr 结构
+  };
+  
+  struct sdshdr {
+      uint32_t len;          // 当前字符串长度
+      uint32_t alloc;        // 已分配的内存大小
+      unsigned char flags;   // 编码类型
+      char buf[];            // 实际字符串数据
+  };
+  ```
+
+  ![redis_string_qpnicna](E:\各种资料\Java开发笔记\我的笔记\images\redis_string_qpnicna.png)
 
 ### 1.2 指令
 
@@ -277,19 +345,156 @@ boolean tryAcquireLock(Jedis jedis, String lockKey, String uuid, int expireTime,
 
 
 
+### 1.4 优势
+
+- **常数时间复杂度的字符串长度获取**：通过`len`字段可以直接获取字符串长度，而C字符串需要遍历整个字符串来计算长度。
+- **空间分配优化**：SDS会预先分配额外的空间（`alloc - len`），减少字符串扩展时的内存分配次数。
+- **二进制安全**：SDS可以存储任意二进制数据，而C字符串以`'\0'`作为结束标志，无法存储包含`'\0'`的二进制数据。
+- **兼容性**：SDS保留了C字符串的大部分特性，方便在Redis内部使用。
+
+
+
 ## 2. hash
 
 ### 2.1 底层实现原理
 
-在Redis6及之前，Hash数据结构底层是通过hashtable + ziplist来实现的。每个Hash键对应一个哈希表，表中的每个字段（field）和值（value）都存储在哈希表的节点中。
+Hash底层结构需要分成两种情况：
 
-[[Redis 的 hash 底层实现原理详解](https://www.mianshiya.com/bank/1791375592078610434/question/1780933295601643521#heading-3)]
+- Redis6及之前，Hash数据结构底层是通过hashtable + ziplist来实现的。
 
-**优势**：
+- Redis7之后，Hash数据结构底层是通过hashtable + Listpack来实现的。
 
-- **高效的数据存储**：可以将多个字段和值存储在一个键下，节省内存。
-- **快速访问**：通过字段名可以直接访问对应的值，时间复杂度为O(1)。
-- **灵活性**：可以动态添加、删除和修改字段。
+ziplist和listpack查找key的效率是类似的，时间复杂度都是0 (n) ，其主要区别就在于listpack 解决了ziplist 的级联更新问题。
+Redis内有两个值，分别是hash-max-ziplist-entries ( hash-max-listpack-entries )以及hash-max- ziplist-value ( hash-max-listpack-value )，即Hash类型键的字段个数(默认512) 以及每个字段名和字段值的长度(默认64)。这两个值是可以修改的，通过如下指令进行修改：
+
+```
+config set hash-max- zip L ist-entries 4399  # 更改为4399
+config set hash-max - z iplist -value 2024  # 更改为2024
+```
+
+> redis 7.0为了兼容早期的版本，没有把ziplist相关的值删掉。
+
+- 当hash小于这两个值的时候，会使用listpack或者ziplist 进行存储。
+- 当大于这两个值的时候会使用hashtable 进行存储。
+
+这里需要注意一个点， 在使用hashtable结构之后，就不会再退化成ziplist或listpack，之后都是使用hashtable进行存储。
+
+> #### ziplist实现原理
+>
+> Ziplist (压缩列表)是一种紧凑的数据结构，它将所有元素紧密排列存储在单个连续内存块中，十分节省空间。
+>
+> 这些元素可以是字符串或整数，且每个元素的存储都紧凑地排列在一起。
+>
+> 以下是ziplist的具体结构:
+>
+> ![redis_ziplist_obgabs](E:\各种资料\Java开发笔记\我的笔记\images\redis_ziplist_obgabs.png)
+>
+> - zlbytes: 记录整个ziplist所占用的字节数。
+> - zltail: 记录ziplit中最后一个节点距离ziplist起始地址的偏移量。
+> - entry:各个节点的数据。
+> - zllen: 记录ziplist中节点的个数。
+> - zlend: 特殊值0xFF,用于标记ziplist的结束。
+>
+> entry的结构如下,会记录前一个节点的长度和编码：
+>
+> ![redis_ziplist_nonfas](E:\各种资料\Java开发笔记\我的笔记\images\redis_ziplist_nonfas.png)
+>
+> 因为entry需要记录前一个元素的大小，如果前面插入的元素很大,则已经存在的entry的pre_ entry_length毀需要变大，改变大后续的节点也需要变，所以可能导致级联更新的情况，影响性能。
+> 查询需按顺序遍历所有元素,逐个检查是否匹配查询条件。
+>
+> 
+>
+> #### Listpack实现原理
+>
+> Listpack采用一种紧凑的格式来存储多个元素(本质上仍是一个字节数组) ，并组使用多种编码方式来表示不同长度的数据。
+>
+> Listpack的结构如下：
+>
+> ![redis_listpack_zbnojabs](E:\各种资料\Java开发笔记\我的笔记\images\redis_listpack_zbnojabs.png)
+>
+> - header: 整个listpack的元数据，包括总长度和总元素个数。
+> - elements: 实际存储的元素，每个元素包括长度和数据部分。
+> - end: 标识listpack结束的特殊字节。
+>
+> element的内部结构如下：
+>
+> ![redis_listpack_zanofdna](E:\各种资料\Java开发笔记\我的笔记\images\redis_listpack_zanofdna.png)
+>
+> - encoding-type: 元素的编码类型。
+> - element-data: 实际存放的数据。
+> - element-tot-len: encoding-type + element-data的总长度，包含自己的长度。
+>
+> 之所以设计它来替换ziplist就是因为ziplist连锁更新的问题，因为ziplist的每个entry会记录之前的entry长度。
+>
+> 如果前面的entry长度变大，那么当前entry记录前面entry的字段所需的空间也需要扩大,而当前的大了，可能后面的entry也得大,这就是所谓的连锁更新，比较影响性能。
+>
+> 而ListPack的每个元素，仅记录自己的长度，这样一来修改会新增不会影响后面的长度变大，也就避免了连锁更新的问题。
+>
+> 
+>
+> #### hashtable实现原理
+>
+> Hashtable就是哈希表实现，查询时间复杂度为0(1)，效率非常快。HashTable的结构如下：
+>
+> ```c
+> typedef struct dictht {
+>     //哈希表数组
+>     dictEntry **table;
+>     //哈希表大小
+>     unsigned long size;  
+>     //哈希表大小掩码，用于计算索引值
+>     unsigned long sizemask;
+>     //该哈希表已有的节点数量
+>     unsigned long used;
+> } dictht;
+> ```
+>
+> dictht一共有4个字段：
+>
+> - table: 哈希表实现存储元素的结构,可以看成是哈希节点(dictEntry) 组成的数组。
+> - size: 示哈希表的大小。
+> - sizemask: 这个是指哈希表大小的掩码，它的值永远等于size-1, 这个属性和哈希值一起约定了哈希节点所处的哈希表的位置,引的值index = hash (哈希值) & sizemask。
+> - used: 示已经使用的节点数量。
+>
+> ![redis_hashtable_aojdq](E:\各种资料\Java开发笔记\我的笔记\images\redis_hashtable_aojdq.png)
+>
+> 我们再看下哈希节点(dictEntry) 的组成，它主要由三个部分组成,分别为key，value 以及指向下一个哈希节点的指针，其源码中结构体的定义如下：
+>
+> ```c
+> typedef struct dictEntry {
+>     //键值对中的键
+>     void *key;
+>   
+>     //键值对中的值
+>     union {
+>         void *val;
+>         uint64_t u64;
+>         int64_t s64;
+>         double d;
+>     } v;
+>     //指向下一个哈希表节点，形成链表
+>     struct dictEntry *next;
+> } dictEntry;
+> ```
+>
+> 结合以上图片，我们可以发现，哈希节点中的value值是由一个联合体组成的。因此,这个值可以是指向实际值的指针、64位无符号整数、64 为整数以及double的值。这样设计的主要目的就是为了节省Redis的内存空间，当值是整数或者浮点数的时候，可以将值的数据存在哈希节点中，不需要使用一个指针指向实际的值, 从一定程度上节省了空间。
+>
+> 实际上，redis的hash为了实现渐进式rehash，它的结构中包含了两个dictht，结构如下：
+>
+> ![redis_hashtable_xaosbno](E:\各种资料\Java开发笔记\我的笔记\images\redis_hashtable_xaosbno.png)
+>
+> **渐进式rehash**
+> 在平时，插入数据的时候，所有的数据都会写入ht[0]即哈希表1, ht [1]哈希表2此时就是一-张没有分配空间的空表。
+> 但是随着数据越来越多，当dict的空间不够的时候，就会触发扩容条件,扩容流程主要分为三步:
+>
+> 1. 首先，为哈希表2即分配空间。新表的大小是第一 个大于等于原表2倍used的2次方幂。举个例子，如果原表即哈希表1的值是1024, 那个其扩容之后的新表大小就是2048。分配好空间之后，此时dict就有了两个哈希表了，然后此时字典的rehashidx即rehash索引的值从-1暂时变成0 ，然后便开始数据转移操作。
+> 2. 数据开始实现转移。每次对hash进行增删改查操作，都会将当前rehashidx 的数据从在哈希表1迁移到2上，然后rehashidx+1，所以迁移的过程是分多次、渐进式地完成。
+>    注意:插入数据会直接插入到2表中。
+> 3. 随着操作不断执行，最终哈希表1的数据都会被迁移到2中,这时候进行指针对象进行互换，即哈希表2变成新的哈希表1,而原先的哈希表1成哈希表2并且设置为空表，最后将rehashidx的值设置为-1。
+>
+> 就这样，渐进式rehash的过程就完成了。
+
+
 
 ### 2.2 指令
 
@@ -382,6 +587,8 @@ HDEL key field [field ...]
 HDEL "user:1001" "age"
 ```
 
+
+
 ### 2.3 应用
 
 #### 2.3.1 用户信息存储
@@ -414,6 +621,14 @@ jedis.hdel("user:1001", "age");
 1. **高效存储**：将用户的所有属性存储在一个Hash对象中，节省内存。
 2. **快速访问**：通过字段名可以直接访问对应的值，时间复杂度为O(1)。
 3. **灵活性**：可以动态添加、删除和修改用户信息。
+
+
+
+### 2.4 优势
+
+- **高效的数据存储**：可以将多个字段和值存储在一个键下，节省内存。
+- **快速访问**：通过字段名可以直接访问对应的值，时间复杂度为O(1)。
+- **灵活性**：可以动态添加、删除和修改字段。
 
 
 
@@ -1090,11 +1305,11 @@ jedis.pfmerge("total_visitors", "visitors1", "visitors2");
 
 
 # 三、Redis keys 命令
-1	DEL key 该命令用于在 key 存在时删除 key。
-2	DUMP key 序列化给定 key ，并返回被序列化的值。
-3	EXISTS key 检查给定 key 是否存在。
-4	EXPIRE key seconds 为给定 key 设置过期时间，以秒计。
-5	EXPIREAT key timestamp EXPIREAT 的作用和 EXPIRE 类似，都用于为 key 设置过期时间。 不同在于 EXPIREAT 命令接受的时间参数是 UNIX 时间戳(unix timestamp)。
+DEL key 该命令用于在 key 存在时删除 key。
+DUMP key 序列化给定 key ，并返回被序列化的值。
+EXISTS key 检查给定 key 是否存在。
+EXPIRE key seconds 为给定 key 设置过期时间，以秒计。
+EXPIREAT key timestamp EXPIREAT 的作用和 EXPIRE 类似，都用于为 key 设置过期时间。 不同在于 EXPIREAT 命令接受的时间参数是 UNIX 时间戳(unix timestamp)。
 6	PEXPIRE key milliseconds 设置 key 的过期时间以毫秒计。
 7	PEXPIREAT key milliseconds-timestamp 设置 key 过期时间的时间戳(unix timestamp) 以毫秒计
 8	KEYS pattern 查找所有符合给定模式( pattern)的 key 。

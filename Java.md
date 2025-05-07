@@ -425,6 +425,8 @@ Lambda表达式由**三部分**组成：
 
 ### 2.3 使用
 
+#### 2.3.1 常用函数式接口
+
 函数式接口通常与 Lambda 表达式和方法引用一起使用。下面是一些使用示例：
 
 Predicate 示例
@@ -506,7 +508,7 @@ public class BinaryOperatorExample {
 }
 ```
 
-自定义函数式接口
+#### 2.3.2 自定义函数式接口
 除了使用 Java 提供的函数式接口外，你还可以定义自己的函数式接口。下面是一个自定义函数式接口的示例：
 
 ```java
@@ -523,10 +525,10 @@ public class FunctionalInterfaceDemo {
 }
 ```
 
-使用方法引用
+#### 2.3.3 使用方法引用
 方法引用是另一种简洁的 Lambda 表达式写法。常见的用法包括引用静态方法、实例方法和构造方法。
 
-静态方法引用
+**静态方法引用**
 
 ```java
 import java.util.function.Function;
@@ -539,7 +541,7 @@ public class MethodReferenceExample {
 }
 ```
 
-实例方法引用
+**实例方法引用**
 
 ```java
 import java.util.function.Predicate;
@@ -723,6 +725,8 @@ t1 等待 10 分钟后，就自动唤醒，拥有了去争夺锁的资格。
 
 - `Object.notify()` 或 `Object.notifyAll()`：唤醒在此对象监视器上等待的单个或所有线程。
 
+- `LockSupport.unpark(Thread)`：唤醒指定的线程。
+
 
 
 #### 1.2.6 RUNNABLE -> TIMED_WAITING
@@ -899,10 +903,10 @@ public static void main(String[] args){
 >
 > ```java
 > public FutureTask(Callable<V> callable) {
->  if (callable == null)
->      throw new NullPointerException();
->  this.callable = callable;
->  this.state = NEW; 
+>      if (callable == null)
+>          throw new NullPointerException();
+>      this.callable = callable;
+>      this.state = NEW; 
 > }
 > ```
 >
@@ -1141,9 +1145,21 @@ Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环
 
 **Java 的锁都是基于对象的**，而一个对象的“锁”存放在对象内存空间的对象头的mark word部分，详细可见JVM对象内存结构部分[ [跳转到对象内存结构](#17-对象内存结构) ]。
 
-### 5.1 CAS
+### 5.1 中断协商机制
 
-#### 5.1.1 原理
+#### 5.1.1 概述
+
+一个线程不应该由其他线程来强制中断或停止，而是应该由线程自己停止，所以Thread.stop，Thread.suspend，Thread.resume都已经被废弃了。
+
+在Java中没有办法立即停止一条线程，然而停止线程却显得尤为重要，如取消一个耗时操作。因此Java提供了一种用于停止线程的协商机制——中断，即中断标识协商机制。
+
+#### 5.1.2 实现
+
+
+
+### 5.2 CAS
+
+#### 5.2.1 概述
 
 `CAS` 全名 `Compare and Swap` 。CAS 是比较并交换的意思，用于在硬件层面上提供原子性操作。在某些处理器架构（如x86）中，比较并交换通过指令 CMPXCHG 实现（（Compare and Exchange），一种原子指令），通过比较是否和给定的数值一致，如果一致则修改，不一致则不修改。
 
@@ -1157,7 +1173,7 @@ Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环
 
 判断 V 是否等于 E，如果等于，将 V 的值设置为 N；如果不等，说明已经有其它线程更新了 V，于是当前线程放弃更新，什么都不做。这里的**预期值 E 本质上指的是“旧值”**。当多个线程同时使用 CAS 操作一个变量时，只有一个会成功更新，其余均会失败，但失败的线程并不会被挂起，仅是被告知失败，并且允许再次尝试，当然也允许失败的线程放弃操作。
 
-#### 5.1.2 实现
+#### 5.2.2 实现
 
 CAS 是一种原子操作，它是一种系统原语，是一条 CPU 的原子指令，从 CPU 层面已经保证它的原子性。
 
@@ -1173,7 +1189,7 @@ boolean compareAndSwapLong(Object o, long offset,long expected,long x);
 
 Unsafe 对 CAS 的实现是通过 C++ 实现的，它的具体实现和操作系统、CPU 都有关系。
 
-#### 5.1.3 使用
+#### 5.2.3 使用
 
 模板（假设多线程对int类型数据进行更新）：
 
@@ -1193,11 +1209,11 @@ public boolean add(Object o, long offset, int delta) {
 
 具体的使用可以学习Unsafe类里面提供的其他方法，比如getAndAddInt()、getAndAddLong()等等方法，这些方法都利用CAS思想来实现线程安全的数据更新操作。
 
-#### 5.1.4 问题
+#### 5.2.4 问题
 
 尽管 CAS 提供了一种有效的同步手段，但也存在一些问题，主要有以下三个：**ABA 问题**、**长时间自旋**、**多个共享变量的原子操作**。
 
-##### 5.1.4.1 ABA 问题
+##### 5.2.4.1 ABA 问题
 
 所谓的 ABA 问题，就是一个值原来是 A，变成了 B，又变回了 A。这个时候使用 CAS 是检查不出变化的，但实际上却被更新了两次。
 
@@ -1237,13 +1253,13 @@ public boolean compareAndSet(V   expectedReference,
 - 如果上述检查通过，也就是说当前的引用和标记与预期的相同，那么接下来就会检查新的引用和标记是否也与当前的相同。如果相同，那么实际上没有必要做任何改变，这个方法就会返回 true。
 - 如果新的引用或者标记与当前的不同，那么就会调用 casPair 方法来尝试更新 pair 对象。casPair 方法会尝试用 newReference 和 newStamp 创建的新的 Pair 对象替换当前的 pair 对象。如果替换成功，casPair 方法会返回 true；如果替换失败（也就是说在尝试替换的过程中，pair 对象已经被其他线程改变了），casPair 方法会返回 false。
 
-##### 5.1.4.2 长时间自旋
+##### 5.2.4.2 长时间自旋
 
 CAS 多与自旋结合。如果自旋 CAS 长时间不成功，会占用大量的 CPU 资源。
 
 解决思路是让 JVM 支持处理器提供的**pause 指令**。pause 指令能让自旋失败时 cpu 睡眠一小段时间再继续自旋，从而使得读操作的频率降低很多，为解决内存顺序冲突而导致的 CPU 流水线重排的代价也会小很多。
 
-##### 5.1.4.3 多个共享变量的原子操作
+##### 5.2.4.3 多个共享变量的原子操作
 
 当对一个共享变量执行操作时，CAS 能够保证该变量的原子性。但是对于多个共享变量，CAS 就无法保证操作的原子性，这时通常有两种做法：
 
@@ -1252,7 +1268,7 @@ CAS 多与自旋结合。如果自旋 CAS 长时间不成功，会占用大量�
 
 
 
-### 5.2 AQS
+### 5.3 AQS
 
 
 
@@ -1362,7 +1378,7 @@ volatile不保证操作的原子性。
   }
   ```
 
-  这时候，volatile 会禁止指令重排序，这个过程建立在 happens before 关系（[上一篇介绍过了](https://javabetter.cn/thread/jmm.html)）的基础上：
+  这时候，volatile 会禁止指令重排序，这个过程建立在 happens before 关系的基础上：
 
   1. 根据程序次序规则，1 happens before 2; 3 happens before 4。
   2. 根据 volatile 规则，2 happens before 3。
@@ -1370,7 +1386,7 @@ volatile不保证操作的原子性。
 
   上述 happens before 关系的图形化表现形式如下：
 
-  ![volatile_onacncsa](E:\各种资料\Java开发笔记\我的笔记\images\volatile_onacncsa.jpg)
+  ![volatile_onacncsa](.\images\volatile_onacncsa.jpg)
 
   > ## 解释
   >
@@ -1509,67 +1525,19 @@ public static Penguin getInstance() {
 
 #### 6.2.1 底层原理
 
-![synchronized_monitor_pnckas](E:\各种资料\Java开发笔记\我的笔记\images\synchronized_monitor_pnckas.png)
+在JDK1.6之前，synchronized底层使用的是重量级锁，在JDK1.6及以后的版本，synchronized优化出了锁升级的实现方式，有无锁、偏向锁、轻量级锁、重量级锁这几种锁状态，在JDK15废除了偏向锁机制。
 
-![synchronized_monitor_xpsca](E:\各种资料\Java开发笔记\我的笔记\images\synchronized_monitor_xpsca.png)
+![synchronized_monitor_pnckas](.\images\synchronized_monitor_pnckas.png)
 
-
-
-##### 6.2.1.1 Monitor机制详解
-
-**每个Java对象都有一个与之关联的Monitor**。这个Monitor在对象创建时自动创建，并且与对象的生命周期绑定。当对象被销毁时，其对应的Monitor也会被销毁。
-
-**Monitor是隐藏的**，我们无法直接操作Monitor，而是通过` synchronized`关键字或者`wait()`、`notify()`、`notifyAll()`等方法间接操作它。
-
-Monitor是synchronized实现互斥（注意专指实现互斥，因此专指实现重量级锁）的核心，当使用synchronized时，JVM会通过**Monitor（管程）**实现互斥。
-
-Monitor实现互斥的本质是依赖于底层操作系统的Mutex Lock实现，操作系统实现线程之间的切换需要从用户态转到内核态，成本非常高。
-
-Monitor其完整结构在JVM源码（如objectMonitor.hpp）中定义如下：
-
-```c++
-class ObjectMonitor {
-    void*     _header;        // 对象头（存储Mark Word）
-    void*     _owner;         // 持有锁的线程指针
-    volatile intptr_t  _recursions; // 重入次数
-    ObjectWaiter* _EntryList; // 竞争锁的线程队列（阻塞态）
-    ObjectWaiter* _WaitSet;   // 调用wait()后的线程队列（等待态）
-    volatile int _WaitSetLock;// 保护WaitSet的锁
-    // ... 其他字段省略
-};
-```
-
-执行流程：
-
-- 线程通过monitorenter指令尝试获取Monitor所有权。
-
-- 若Owner为空，则当前线程成为Owner，recursions=1。
-- 若Owner是当前线程，recursions++（可重入性）。
-- 竞争失败则进入EntryList阻塞等待。
-
-关键队列说明：
-
-- EntryList
-  - 当线程A持有锁时，线程B尝试获取锁失败，会被封装为ObjectWaiter节点加入EntryList，并进入BLOCKED状态。
-  - 唤醒规则：锁释放时，JVM会从EntryList中选择线程（非公平模式下可能直接唤醒最新竞争者）。
-
-- WaitSet
-  - 当线程调用wait()方法后，线程会释放锁并进入WaitSet，状态变为WAITING。
-  - 唤醒条件：其他线程调用notify()/notifyAll()后，线程从WaitSet转移到EntryList重新竞争锁。
+![synchronized_monitor_xpsca](.\images\synchronized_monitor_xpsca.png)
 
 
 
-##### 6.2.1.2 synchronized控制原理
-
-在JVM中，synchronized是基于进入和退出**Monitor对象**来实现的，无论是显式同步还是隐式同步。
-
-对于**方法级的同步**，它是隐式的，即**无需通过字节码指令来控制**，它实现在方法调用和返回操作中。JVM可以从方法常量池中的方法表结构中的**ACC_SYNCHRONIZED**访问标志来区分一个方法是否为同步方法。当方法调用时，调用指令会检查方法的ACC_SYNCHRONIZED访问标志是否被设置，如果设置了，执行线程将**先持有Monitor，然后执行方法**，最后在方法完成时释放Monitor。
-
-对于**代码块的同步**，它是利用**monitorenter**和**monitorexit**这两个字节码指令实现的。这些指令分别位于同步代码块的开始和结束位置。当JVM执行到monitorenter指令时，当前线程会尝试获取Monitor对象的所有权，如果获取成功，就会执行同步代码块，然后通过monitorexit指令释放Monitor对象。
+**注意：**biased_lock为1并不代表此锁对象为偏向锁，而是代表该锁对象是可偏向的无锁状态，只有当MarkWord中存储了偏向的线程ID，此时才算是偏向锁状态。
 
 
 
-##### 6.2.1.3 无锁
+##### 6.2.1.1 无锁
 
 **概述**
 
@@ -1577,11 +1545,11 @@ class ObjectMonitor {
 
 
 
-##### 6.2.1.4 偏向锁
+##### 6.2.1.2 偏向锁
 
 **概述**
 
-偏向锁用在单线程竞争，即**锁总是由同一线程多次获得**，偏向锁会偏向于第一个访问锁的线程，如果在接下来的运行过程中，该锁没有被其他的线程访问，则持有偏向锁的线程将永远不需要触发同步。也就是说，**偏向锁在资源无竞争情况下消除了同步语句**，连 `CAS` 操作都不做了，着极大地提高了程序的运行性能。
+偏向锁用在单线程竞争，即**锁总是由同一线程多次获得**，偏向锁会偏向于第一个访问锁的线程，如果在接下来的运行过程中，该锁没有被其他的线程访问，则持有偏向锁的线程将永远不需要触发同步。也就是说，**偏向锁在资源无竞争情况下消除了同步语句**，连 `CAS` 操作都不做了，着极大地提高了程序的运行性能。但是如果线程间存在锁竞争，那么会太带来额外的所撤销的消耗。因此偏向锁适用于只有一个线程访问同步块的场景。
 
 **实现原理**
 
@@ -1597,6 +1565,22 @@ class ObjectMonitor {
 
   - 替换失败，表示之前的线程仍占有锁，此时新旧线程形成竞争关系，那么会将偏向锁升级为轻量锁，然后以轻量锁的竞争方式进行锁的竞争。
 
+**偏向锁机制**
+
+当偏向锁机制开启后，所有对象都会变成可偏向状态，此时所有对象都处于偏向锁状态，只是MarkWord中的线程ID为0，可以简单理解为偏向锁机制开启后，默认的锁状态不是无锁状态，而是偏向锁状态。
+
+锁的升级开销很大，如果应用程序里所有的锁通常处于竞争状态，那么偏向锁就会是一种累赘，对于这种情况，我们可以一开始就把偏向锁这个默认功能给关闭：
+
+```
+-XX:UseBiasedLocking=false
+```
+
+HotSpot JVM在启动时，默认会延迟4秒后才启用偏向锁机制。这个延迟时间可以通过JVM参数`-XX:BiasedLockingStartupDelay`来配置。默认情况下，`-XX:BiasedLockingStartupDelay`的值是**4000毫秒**（即4秒）。这意味着JVM启动后，偏向锁机制会在4秒后自动启用。如果需要调整这个延迟时间，可以通过设置`-XX:BiasedLockingStartupDelay`参数来实现。例如：
+
+```
+-XX:BiasedLockingStartupDelay=2000
+```
+
 **锁撤销**
 
 如下两种情况进行锁撤销：
@@ -1604,55 +1588,156 @@ class ObjectMonitor {
 - 第一个线程正在执行synchronized方法(处于同步块)，它还没有执行完，其它线程来抢夺，该偏向锁会被取消掉并出现锁升级。
 - 第一个线程执行完成synchronized方法(退出同步块)，则将对象头设置成无锁状态并撤销偏向锁，重新偏向。
 
+**锁升级**
 
-
-可见锁的升级开销很大，如果应用程序里所有的锁通常处于竞争状态，那么偏向锁就会是一种累赘，对于这种情况，我们可以一开始就把偏向锁这个默认功能给关闭：
-
-```
--XX:UseBiasedLocking=false
-```
+当且仅当偏向锁机制开启，并且有线程占用锁的时候从无锁升级为偏向锁。
 
 
 
-##### 6.2.1.5 轻量锁
+##### 6.2.1.3 轻量级锁
 
 **概述**
 
+处于轻量级锁状态时，多线程利用CAS来轮询获取锁，因此竞争的线程不会阻塞，提高了程序的相应速度，但是始终得不到锁竞争的线程会不断自旋导致严重消耗CPU。因此轻量级锁适用于追求响应时间并且同步块执行速度非常快的场景。
 
+**实现原理**
 
-##### 6.2.1.6 重量级锁
+线程每次加锁，都会在线程的栈帧中分配一块锁记录的空间，锁记录里面包含了锁对象的Mark Word(displaced word)和指向锁对象的指针，而锁对象的对象头里面的ptr_to_lock_record是指向栈帧中锁记录的指针。
 
+当线程第一次加锁时，锁记录就去记录完整的Mark Word和锁对象指针，当线程重入加锁时，同样会生成一个锁记录，但该锁记录里面的displaced word就为null，只记录了指向锁对象的指针，而锁对象里面的ptr_to_lock_record记录的是**线程栈顶**的锁记录，如下图所示：
 
+![synchronized_lock_lnjsboa](.\images\synchronized_lock_lnjsboa.png)
 
-##### 6.2.1.7 锁升级
+当字节码解释器在执行monitorenter字节码轻度锁住一个对象时，就会在获取锁的线程的栈上显示或隐式分配一个lock record。其主要作用就是持有displaced word和锁对象的元数据，解释器可以使用lock record来检测非法的锁状态；隐式地充当重入机制的计数器。
 
-**无锁 -> 偏向锁**
+轻量级锁加锁逻辑如下图所示：
 
+![synchronized_lock_kasjbc](.\images\synchronized_lock_kasjbc.png)
 
+**锁撤销**
 
-**偏向锁 -> 轻量锁**
+在释放锁时，当前线程会使用`CAS`操作将`Displaced Mark Word`的内容复制回锁的`Mark Word`里面：
 
-如果两个线程都是活跃的，会发生竞争，此时偏向锁就会发生升级，也就是我们常常听到的锁膨胀。**偏向锁会膨胀成轻量级锁(lightweight locking)。**
+- 如果没有发生竞争，那么这个复制的操作就会成功。
+- 如果有其他线程因为自旋多次导致轻量级锁升级成了重量级锁，那么`CAS`操作就会失败，此时就会释放锁并唤醒被阻塞的线程。
 
-下面先简单地描述其升级的步骤：
-
-1. 在一个全局安全点（在这个时间点上没有字节码正在执行）停止拥有锁的线程。
-2. 拥有锁的线程在自己的栈桢中创建锁记录 LockRecord。
-3. 将锁对象的对象头中的MarkWord复制到线程的刚刚创建的锁记录中
-4. 将锁记录 LockRecord 中的Owner指针指向锁对象
-5. 将锁对象的对象头的 MarkWord 替换为指向锁记录的指针。
-
-其过程可以用如下图表示：
-
-![synchronized_lock_noasb](E:\各种资料\Java开发笔记\我的笔记\images\synchronized_lock_noasb.jpeg)
-
-![synchronized_lock_aohwd](E:\各种资料\Java开发笔记\我的笔记\images\synchronized_lock_aohwd.jpeg)
-
-**轻量锁 -> 重量锁**
+![synchronized_lock_lanoibf](.\images\synchronized_lock_lanoibf.png)
 
 
 
-#### 6.2.2 使用教程
+**锁升级**
+
+- 处于偏向锁时，遇到两个及以上的线程竞争，此时从偏向锁升级为轻量级锁。
+
+  如果两个线程都是活跃的，会发生竞争，此时偏向锁就会发生升级，也就是我们常常听到的锁膨胀。**偏向锁会膨胀成轻量级锁(lightweight locking)。**
+
+  下面先简单地描述其升级的步骤：
+
+  1. 在一个全局安全点（在这个时间点上没有字节码正在执行）停止拥有锁的线程。
+  2. 拥有锁的线程在自己的栈桢中创建锁记录 LockRecord。
+  3. 将锁对象的对象头中的MarkWord复制到线程的刚刚创建的锁记录中
+  4. 将锁记录 LockRecord 中的Owner指针指向锁对象
+  5. 将锁对象的对象头的 MarkWord 替换为指向锁记录的指针。
+
+  其过程可以用如下图表示：
+
+  ![synchronized_lock_noasb](.\images\synchronized_lock_noasb.jpeg)
+
+  ![synchronized_lock_aohwd](.\images\synchronized_lock_aohwd.jpeg)
+
+- 关闭偏向锁时，只要获取锁就会直接从无锁升级到轻量级锁。
+
+- 在锁对象处于无锁状态的时候获取过一致性哈希（即调用过hashCode()方法），则之后获取锁就会直接进入轻量级锁状态，而不会进入偏向锁状态。
+
+  > 主要是因为锁对象处于偏向锁状态时，对象头的`MarkWord`无法存储哈希值，只有到轻量级锁或者重量级锁才能存储哈希值，因此获取了一致性哈希后，为了保证哈希值只获取一次，因此需要一直存储着哈希值，也就不能用无法存储哈希值的偏向锁了，状态只能介于无锁、轻量级锁、重量级锁之间。
+
+
+
+##### 6.2.1.4 重量级锁
+
+**概述**
+
+重量级锁依赖于每个对象内部都有的monitor锁来实现的，而monitor又依赖于操作系统的MutexLock(互斥锁)来实现，所以一般重量级锁也叫**互斥锁**。
+
+由于需要在操作系统的内核态和用户态之间切换的，需要将线程阻塞挂起，切换线程的上下文，再恢复等操作，所以当synchronized升级成互斥锁，依赖monitor的时候，开销就比较大了，而这也是为什么说synchronized是一个很重的操作的原因了。
+
+当然，升级成互斥锁之后，锁对象头的MarkWord内容也是会变化的，其锁标志位变成10，并且记录monitor的地址。
+
+重量级锁状态下，线程竞争不适用自旋，不会消耗CPU，但是线程会进入阻塞，导致响应时间缓慢。因此重量级锁适用于追求吞吐量大且同步块执行速度较长的情景。
+
+**实现原理**
+
+- monitor机制
+
+  **每个Java对象都有一个与之关联的Monitor**。这个Monitor在对象创建时自动创建，并且与对象的生命周期绑定。当对象被销毁时，其对应的Monitor也会被销毁。
+
+  **Monitor是隐藏的**，我们无法直接操作Monitor，而是通过` synchronized`关键字或者`wait()`、`notify()`、`notifyAll()`等方法间接操作它。
+
+  Monitor是synchronized实现互斥（注意专指实现互斥，因此专指实现重量级锁）的核心，当使用synchronized时，JVM会通过**Monitor（管程）**实现互斥。
+
+  Monitor实现互斥的本质是依赖于底层操作系统的Mutex Lock实现，操作系统实现线程之间的切换需要从用户态转到内核态，成本非常高。
+
+  Monitor其完整结构在JVM源码（如objectMonitor.hpp）中定义如下：
+
+  ```c++
+  class ObjectMonitor {
+      void*     _header;        // 对象头（存储Mark Word）
+      void*     _owner;         // 持有锁的线程指针
+      volatile intptr_t  _recursions; // 重入次数
+      ObjectWaiter* _EntryList; // 竞争锁的线程队列（阻塞态）
+      ObjectWaiter* _WaitSet;   // 调用wait()后的线程队列（等待态）
+      volatile int _WaitSetLock;// 保护WaitSet的锁
+      // ... 其他字段省略
+  };
+  ```
+
+  执行流程：
+
+  - 线程通过monitorenter指令尝试获取Monitor所有权。
+
+  - 若Owner为空，则当前线程成为Owner，recursions=1。
+  - 若Owner是当前线程，recursions++（可重入性）。
+  - 竞争失败则进入EntryList阻塞等待。
+
+  关键队列说明：
+
+  - EntryList
+    - 当线程A持有锁时，线程B尝试获取锁失败，会被封装为ObjectWaiter节点加入EntryList，并进入BLOCKED状态。
+    - 唤醒规则：锁释放时，JVM会从EntryList中选择线程（非公平模式下可能直接唤醒最新竞争者）。
+
+  - WaitSet
+    - 当线程调用wait()方法后，线程会释放锁并进入WaitSet，状态变为WAITING。
+    - 唤醒条件：其他线程调用notify()/notifyAll()后，线程从WaitSet转移到EntryList重新竞争锁。
+
+- 重量级锁实现
+
+  在JVM中，重量级锁是基于进入和退出**Monitor对象**来实现的，无论是显式同步还是隐式同步。
+
+  对于**方法级的同步**，它是隐式的，即**无需通过字节码指令来控制**，它实现在方法调用和返回操作中。JVM可以从方法常量池中的方法表结构中的**ACC_SYNCHRONIZED**访问标志来区分一个方法是否为同步方法。当方法调用时，调用指令会检查方法的ACC_SYNCHRONIZED访问标志是否被设置，如果设置了，执行线程将**先持有Monitor，然后执行方法**，最后在方法完成时释放Monitor。
+
+  对于**代码块的同步**，它是利用**monitorenter**和**monitorexit**这两个字节码指令实现的。这些指令分别位于同步代码块的开始和结束位置。当JVM执行到monitorenter指令时，当前线程会尝试获取Monitor对象的所有权，如果获取成功，就会执行同步代码块，然后通过monitorexit指令释放Monitor对象。
+
+**锁升级**
+
+当轻量级锁自旋达到一定次数时，就会从轻量级锁升级为重量级锁，允许自旋次数的默认值是**10次**，即默认自旋超过10次仍然没有成功获得锁就会升级为重量级锁，用户可以使用参数-XX：PreBlockSpin来更改。 
+
+在JDK 1.6中引入了自适应的自旋锁，具体为若前一次自旋获得锁成功，那么下一次自旋获取锁的时候允许自旋次数会增加，因为前一次获取锁成功的话，虚拟机会认为下一次很可能再次成功获得锁，因此提高了允许自旋次数。相反的，若前一次自旋获得锁失败，那么下一次自旋获得锁允许自旋次数就会减少。
+
+
+
+##### 6.2.1.5 锁消除
+
+编译器在编译时检测到不可能存在竞争条件的代码块，并将其对应的锁消除掉，从而提高程序性能。
+
+
+
+##### 6.2.1.6 锁粗化
+
+将多个连续的细粒度锁合并成一个粗粒度锁，减少锁的获取和释放操作次数，提高执行效率。
+
+
+
+#### 6.2. 使用教程
 
 synchronized 就是**可重入锁**，因此一个线程调用 synchronized 方法的同时，在其方法体内部调用该对象另一个 synchronized 方法是允许的。
 
@@ -1904,11 +1989,17 @@ public class AccountingSync2 implements Runnable {
 
 
 
-### 6.3 ReentrantLock
+### 6.5 LockSupport
 
 
 
-### 6.4 ReentrantReadWriteLock
+
+
+### 6.4 ReentrantLock
+
+
+
+### 6.5 ReentrantReadWriteLock
 
 
 
@@ -1935,6 +2026,105 @@ public class AccountingSync2 implements Runnable {
 ​	虚拟机栈是线程私有，它的生命周期与线程相同，是在JVM运行时所创建，在线程中，方法在执行的时候都会创建一个名为栈帧的数据结构，主要用于存放局部变量表、操作栈、动态链接、方法出口等信息，如下图所示，方法的调用对应着栈帧在虚拟机栈中的压栈和弹栈过程。
 
 ![jvm_csanio](.\images\jvm_csanio.jpg)
+
+#### 1.2.1 局部变量表
+
+- **作用**：
+
+  - 局部变量表用于存储方法参数和方法内部定义的局部变量。它是一块线性分配的内存空间，每个变量占用一个或多个槽位（Slot）。对于基本数据类型（如 `int`、`float`、`boolean` 等）和对象引用（`reference` 类型），每个变量占用一个槽位；而 `long` 和 `double` 类型的变量占用两个槽位。
+  - 在方法执行过程中，局部变量表中的变量可以通过索引访问。例如，`iload_0` 指令表示将局部变量表中索引为 0 的 `int` 类型变量加载到操作数栈顶。
+  - 局部变量表的大小在方法定义时就已经确定，它存储在方法的 `Code` 属性中。编译器会根据方法的参数和局部变量的数量来计算局部变量表的大小。
+
+- **示例**：
+
+  ```java
+  public void exampleMethod(int a, int b) {
+      int c = a + b;
+  }
+  ```
+
+  在这个方法中，局部变量表会存储参数 `a` 和 `b`，以及局部变量 `c`。
+
+
+
+#### 1.2.2 操作数栈
+
+- **作用**：
+
+  - 操作数栈是一个后进先出（LIFO）的栈结构，用于存储方法执行过程中的中间计算结果。它在方法执行过程中起到临时存储的作用，类似于 CPU 中的寄存器。
+  - 操作数栈的大小在方法定义时也已经确定，存储在方法的 `Code` 属性中。操作数栈中的元素可以是任意 Java 数据类型的值，包括 `int`、`float`、`long`、`double`、`reference` 和 `returnAddress` 等。
+  - JVM 的指令集大多是基于操作数栈的。例如，`iadd` 指令会从操作数栈中弹出两个 `int` 类型的值，将它们相加后将结果压入操作数栈。
+
+- **示例**： 假设执行以下代码：
+
+  ```java
+  int a = 10;
+  int b = 20;
+  int c = a + b;
+  ```
+
+  对应的字节码操作可能如下：
+
+  - 将 `a` 的值压入操作数栈。
+  - 将 `b` 的值压入操作数栈。
+  - 执行 `iadd` 指令，将栈顶的两个值相加，结果压入操作数栈。
+  - 将结果存储到局部变量表中。
+
+
+
+#### 1.2.3 动态链接
+
+- **作用**：
+
+  - 动态链接用于支持 Java 的动态绑定特性。在方法执行过程中，JVM 需要将方法调用中的符号引用（如类名、方法名和方法描述符）解析为具体的内存地址。动态链接确保了方法调用的正确性和灵活性。
+  - 每个栈帧中都包含一个指向运行时常量池的引用，运行时常量池中存储了方法调用所需的符号引用信息。当方法被调用时，JVM 通过动态链接将这些符号引用解析为实际的方法地址。
+  - 动态链接是 Java 多态实现的基础。例如，当调用一个对象的虚方法时，JVM 会通过动态链接找到该对象实际所属类的对应方法实现。
+
+- **示例**：
+
+  ```java
+  class Parent {
+      public void show() {
+          System.out.println("Parent show");
+      }
+  }
+  
+  class Child extends Parent {
+      @Override
+      public void show() {
+          System.out.println("Child show");
+      }
+  }
+  
+  public class Test {
+      public static void main(String[] args) {
+          Parent obj = new Child();
+          obj.show(); // 输出 "Child show"
+      }
+  }
+  ```
+
+  在这个例子中，`obj.show()` 的调用通过动态链接找到 `Child` 类的 `show` 方法实现。
+
+  
+
+#### 1.2.4 方法出口
+
+- **作用**：
+
+  - 方法出口用于处理方法执行完成后的返回操作。当方法执行完毕后，JVM 需要将方法的返回值（如果有）传递给调用者，并恢复调用者的上下文环境（如恢复调用者的操作数栈和局部变量表）。
+  - 方法出口还负责处理异常情况。如果方法执行过程中抛出了异常，JVM 会通过方法出口将异常信息传递给调用者，并根据异常处理机制决定是否继续执行调用者的代码。
+  - 方法出口是方法调用生命周期的终点，它确保了方法调用的正确结束，并恢复线程的执行状态。
+
+- **示例**：
+
+  ```java
+  public int add(int a, int b) {
+      return a + b; // 方法出口将结果返回给调用者
+  }
+  ```
+
+  在这个例子中，`add` 方法执行完成后，通过方法出口将结果返回给调用者。
 
 
 
@@ -1974,35 +2164,35 @@ public class AccountingSync2 implements Runnable {
 
 HotSpot 虚拟机中，对象在内存中存储的布局可以分为三块区域：对象头（Header）、实例数据（Instance Data）和对齐填充（Padding）。
 
-![object_memory_xnldlk](E:\各种资料\Java开发笔记\我的笔记\images\object_memory_xnldlk.png)
+![object_memory_xnldlk](.\images\object_memory_xnldlk.png)
 
 #### 1.7.1 对象头
 
 HotSpot虚拟机的对象头分为两部分信息，第一部分用于存储对象自身运行时数据，如哈希码、GC分代年龄等，这部分数据的长度在32位和64位的虚拟机中分别为32位和64位。官方称为Mark Word。另一部分用于存储指向对象类型数据的指针，如果是数组对象的话，还会有一个额外的部分存储数组长度。
 
-![object_memory_papfq](E:\各种资料\Java开发笔记\我的笔记\images\object_memory_papfq.png)
+![object_memory_papfq](.\images\object_memory_papfq.png)
 
 先简单介绍下对象头的形式，JVM中对象头的方式有以下两种（以32位JVM为例）：
 
 普通对象：
 
-![object_memory_apqnp](E:\各种资料\Java开发笔记\我的笔记\images\object_memory_apqnp.png)
+![object_memory_apqnp](.\images\object_memory_apqnp.png)
 
 数组对象：
 
-![object_memory_nconajp](E:\各种资料\Java开发笔记\我的笔记\images\object_memory_nconajp.png)
+![object_memory_nconajp](.\images\object_memory_nconajp.png)
 
 ##### 1.7.1.1 Mark Word
 这部分主要用来存储对象自身的运行时数据，如hashcode、gc分代年龄等。mark word的位长度为JVM的一个Word大小，也就是说32位JVM的Mark word为32位，64位JVM为64位。
 为了让一个字大小存储更多的信息，JVM将字的最低两个位设置为标记位，不同标记位下的Mark Word示意如下：
 
-![object_memory_zmpbng](E:\各种资料\Java开发笔记\我的笔记\images\object_memory_zmpbng.png)
+![object_memory_zmpbng](.\images\object_memory_zmpbng.png)
 
 其中各部分的含义如下：
 
 - lock：2位的锁状态标记位，由于希望用尽可能少的二进制位表示尽可能多的信息，所以设置了lock标记。该标记的值不同，整个mark word表示的含义不同。
 
-![object_memory_mvjso](E:\各种资料\Java开发笔记\我的笔记\images\object_memory_mvjso.png)
+![object_memory_mvjso](.\images\object_memory_mvjso.png)
 
 - bias_lock：对象是否启动偏向锁标记，只占1个二进制位。为1时表示对象启动偏向锁，为0时表示对象没有偏向锁。
 

@@ -376,7 +376,7 @@ systemctl restart mysqld.service
 
 #### 2.1.2 唯一性索引
 
-​	使用`UNIQUE`参数可以设置索引为唯一性索引，在创建唯一性索引时，**限制该索引的值必须是唯一的，但允许有 空值。在一张数据表里可以有多个唯一索引**。
+​	使用`UNIQUE`参数可以设置索引为唯一性索引，在创建唯一性索引时，**限制该索引的值必须是唯一的，但允许有空值。在一张数据表里可以有多个唯一索引**。
 
 #### 2.1.3 主键索引
 
@@ -444,7 +444,9 @@ B+树中，每一个记录（包括数据记录和目录项记录）结构如下
 <img src=".\images\mysql_btree_csanklv.png" alt="mysql_btree_csanklv" style="zoom: 50%;" />
 
 **①一个简单的索引设计方案**
-我们在根据某个搜索条件查找一些记录时为什么要遍历所有的数据页呢？因为各个页中的记录并没有规律，我们并不知道我们的搜索条件匹配哪些页中的记录，所以不得不依次遍历所有的数据页。所以如果我们想快速的定位到需要查找的记录在哪些数据页中该咋办？我们可以为快速定位记录所在的数据页而建立一个目录 ，建这个目录必须完成下边这些事：
+我们在根据某个搜索条件查找一些记录时为什么要遍历所有的数据页呢？因为各个页中的记录并没有规律，我们并不知道我们的搜索条件匹配哪些页中的记录，所以不得不依次遍历所有的数据页。
+
+所以如果我们想快速的定位到需要查找的记录在哪些数据页中该咋办？我们可以为快速定位记录所在的数据页而建立一个目录 ，建这个目录必须完成下边这些事：
 
 - 下一个数据页中数据项记录的主键值必须大于上一个页中数据项记录的主键值。
 
@@ -454,9 +456,9 @@ B+树中，每一个记录（包括数据记录和目录项记录）结构如下
 
 ![mysql_btree_ndslvd](.\images\mysql_btree_ndslvd.png)
 
-以 页28 为例，它对应 目录项2 ，这个目录项中包含着该页的页号 28 以及该页中数据项记录的最小主键值 5 。我们只需要把几个目录项在物理存储器上连续存储（比如：数组），就可以实现根据主键值快速查找某条记录的功能了。比如：查找主键值为 20 的记录，具体查找过程分两步：
+以 页28 为例，它对应目录项2 ，这个目录项中包含着该页的页号 28 以及该页中数据项记录的最小主键值 5 。我们只需要把几个目录项在物理存储器上连续存储（比如：数组），就可以实现根据主键值快速查找某条记录的功能了。比如：查找主键值为 20 的记录，具体查找过程分两步：
 
-- 先从目录项中根据 二分法 快速确定出主键值为 20 的记录在 目录项3 中（因为 12 < 20 < 209 ），它对应的页是 页9 。
+- 先从目录项中根据二分法快速确定出主键值为 20 的记录在 目录项3 中（因为 12 < 20 < 209 ），它对应的页是 页9 。
 
 - 再根据前边说的在页中查找记录的方式去 页9 中定位具体的记录。
 
@@ -528,7 +530,7 @@ B+树中，每一个记录（包括数据记录和目录项记录）结构如下
 
 ​	不论是存放数据项记录的数据页，还是存放目录项记录的数据页，我们都把它们存放到B+树这个数据结构中了，所以我们也称这些数据页为节点。从图中可以看出，我们的实际数据项记录其实都存放在B+树的最底层的节点上，这些节点也被称为叶子节点，其余用来存放目录项的节点称为非叶子节点或者内节点，其中B+树最上边的那个节点也称为根节点。
 
-​	一个B+树的节点其实可以分成好多层，规定最下边的那层，也就是存放我们数据项记录的那层为第 0层，之后依次往上加。之前我们做了一个非常极端的假设：存放数据项记录的页最多存放3条记录 ，存放目录项记录的页最多存放4条记录 。其实真实环境中一个页存放的记录数量是非常大的，假设所有存放数据项记录的叶子节点代表的数据页可以存放100条数据项记录，所有存放目录项记录的内节点代表的数据页可以存放1000条目录项记录 ，那么：
+​	一个B+树的节点其实可以分成好多层，规定最下边的那层，也就是存放我们数据项记录的那层为第 0 层，之后依次往上加。之前我们做了一个非常极端的假设：存放数据项记录的页最多存放3条记录 ，存放目录项记录的页最多存放4条记录 。其实真实环境中一个页存放的记录数量是非常大的，假设所有存放数据项记录的叶子节点代表的数据页可以存放100条数据项记录，所有存放目录项记录的内节点代表的数据页可以存放1000条目录项记录 ，那么：
 
 - 如果B+树只有1层，也就是只有1个用于存放数据项记录的节点，最多能存放 100 条记录。
 
@@ -562,8 +564,8 @@ B+树中，每一个记录（包括数据记录和目录项记录）结构如下
 - 使用记录主键值的大小进行记录和页的排序，这包括三个方面的含义：
 
   - 页内的记录是按照主键的大小顺序排成一个单向链表。
-  - 各个存放 用户记录的页也是根据页中用户记录的主键大小顺序排成一个双向链表 。
-  - 存放目录项记录的页分为不同的层次，在同一层次中的页也是根据页中目录项记录的主键大小顺序排成一个 双向链表。
+  - 各个存放用户记录的页也是根据页中用户记录的主键大小顺序排成一个双向链表 。
+  - 存放目录项记录的页分为不同的层次，在同一层次中的页也是根据页中目录项记录的主键大小顺序排成一个双向链表。
 - B+树的叶子节点存储的是完整的用户记录。
 - 所谓完整的用户记录，就是指这个记录中存储了所有列的值（包括隐藏列）。
 
@@ -588,8 +590,7 @@ B+树中，每一个记录（包括数据记录和目录项记录）结构如下
 
 - 如果没有定义主键，Innodb会选择非空的唯一索引代替。如果没有这样的索引，Innodb会隐式的定义一个主键来作为聚簇索引。
 
-- 为了充分利用聚簇索引的聚簇的特性，所以innodb表的主键列尽量选用有序的顺序id，而不建议用无序的id，
-  比如UUID、MD5、HASH、字符串列作为主键无法保证数据的顺序增长。
+- 为了充分利用聚簇索引的聚簇的特性，所以innodb表的主键列尽量选用有序的顺序id，而不建议用无序的id，比如UUID、MD5、HASH、字符串列作为主键无法保证数据的顺序增长。
 
 
 
@@ -607,11 +608,11 @@ B+树中，每一个记录（包括数据记录和目录项记录）结构如下
 
   - 页内的记录是按照c2列的大小顺序排成一个单向链表。
 
-  - 各个存放用户记录的页 也是根据页中记录的c2列大小顺序排成一个 双向链表。
+  - 各个存放用户记录的页也是根据页中记录的c2列大小顺序排成一个双向链表。
 
   - 存放目录项记录的页分为不同的层次，在同一层次中的页也是根据页中目录项记录的c2列大小顺序排成一个双向链表。
 
-- B+树的叶子节点存储的并不是完整的用户记录，而只是c2列和数据项记录（这里数据项记录可能是用户记录，也可能是）。
+- B+树的叶子节点存储的并不是完整的用户记录，而只是c2列和数据项记录（这里数据项记录是主键值（Innodb）或数据文件偏移量（MyISAM））。
 
 **使用**
 
@@ -2174,7 +2175,7 @@ mysql> EXPLAIN SELECT * FROM s1 INNER JOIN s2 ON s1.key1 = s2.key1 WHERE s1.comm
 
 **事务：**一组逻辑操作单元，使数据从一种状态变换到另一种状态。(一组不可分隔的操作)
 
-**事务处理的原则：**保证所有事务都作为 `一个工作单元` 来执行，即使出现了故障，都不能改变这种执行方 式。当在一个事务中执行多个操作时，要么所有的事务都被提交( `commit` )，那么这些修改就 `永久` 地保 `存下来`；要么数据库管理系统将 `放弃` 所作的所有 `修改` ，整个事务回滚( rollback )到最初状态。
+**事务处理的原则：**保证所有事务都作为 `一个工作单元` 来执行，即使出现了故障，都不能改变这种执行方式。当在一个事务中执行多个操作时，要么所有的事务都被提交( `commit` )，那么这些修改就 `永久` 地保 `存下来`；要么数据库管理系统将 `放弃` 所作的所有 `修改` ，整个事务回滚( rollback )到最初状态。
 
 ## 2. 引擎支持情况
 
@@ -2535,7 +2536,7 @@ SET SESSION TRANSACTION_ISOLATION = 'SERIALIZABLE';
 
 #### 7.2.1 概念
 
-​	**redo log**是事务**持久性和原子性**的保障；是一个**物理日志**（每条`redo log`记录由“`表空间号+数据页号+偏移量+修改数据长度+具体修改的数据`”组成）；是  **InnoDB存储引擎** 独有的；它让`MySQL`有了**崩溃恢复**的能力，当`MySQL`实例挂了或者宕机了，**重启的时候**`InnoDB`存储引擎会使用`rede log`日志**恢复数据**，**保证事务的持久性和完整性**。如下图：
+​	**redo log**是事务**持久性和原子性**的保障；是一个**物理日志**（每条`redo log`记录由“`表空间号+数据页号+偏移量+修改数据长度+具体修改的数据`”组成）；是**InnoDB存储引擎**独有的；它让`MySQL`有了**崩溃恢复**的能力，当`MySQL`实例挂了或者宕机了，**重启的时候**`InnoDB`存储引擎会使用`rede log`日志**恢复数据**，**保证事务的持久性和完整性**。如下图：
 
 ![img](https://segmentfault.com/img/remote/1460000041758787)
 
@@ -2587,14 +2588,14 @@ SET SESSION TRANSACTION_ISOLATION = 'SERIALIZABLE';
 
 **redo 日志写入log buffer**
 
-向`log buffer`中写入redo日志的过程是顺序的，也就是先往前边的block中写，当该block的空闲空间用完之后再往下一个block中写。当我们想往`log buffer`中写入redo日志时，第一个遇到的问题就是应该写在哪个`block`的哪个偏移量处，所以InnoDB的设计者特意提供了一个称之为`buf_free`的全局变量，该变量指明后续写入的 redo日志应该写入到`log buffer`中的哪个位置，如图所示：
+向`log buffer`中写入redo日志的过程是顺序的，也就是先往前边的block中写，当该block的空闲空间用完之后再往下一个block中写。当我们想往`log buffer`中写入redo日志时，第一个遇到的问题就是应该写在哪个`block`的哪个偏移量处，所以InnoDB的设计者特意提供了一个称之为`buf_free`的全局变量，该变量指明后续写入的redo日志应该写入到`log buffer`中的哪个位置，如图所示：
 
 ![image-20240925124739050](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f395eb560f5.png)
 
 一个mtr执行过程中可能产生若干条redo日志，`这些redo日志是一个不可分割的组`，所以其实并不是每生成一条 redo日志，就将其插入到log buffer中，而是每个mtr运行过程中产生的日志先暂时存到一个地方，当该mtr结束的时候，将过程中产生的一组redo日志再全部复制到log buffert中。我们现在假设有两个名为`T1`、`T2`的事务，每个事务都包含2个mtr，我们给这几个mtr命名一下：
 
 - 事务`T1`的两个`mtr`分别称为`mtr_T1_1`和`mtr_T1_2`。
-- 事务`T2`的两个`mtr`分别称为`mtr_T2_1`和`mtr_T2_2`
+- 事务`T2`的两个`mtr`分别称为`mtr_T2_1`和`mtr_T2_2`。
 
 每个mtr都会产生一组redo日志，用示意图来描述一下这些mtr产生的日志情况：
 
@@ -2624,10 +2625,10 @@ SET SESSION TRANSACTION_ISOLATION = 'SERIALIZABLE';
   
   属性介绍如下：
 
-  - `LOG_BL0CK_HDR_NO`: log buffer是由log block组成，在内部log buffer就好似一个数组，因此 LOG_BLOCK_HDR_NO 用来标记这个数组中的位置。其是递增并且循环使用的，占用4个字节，但是由于第一位用来判断是否是flush bit，所以最大的值为2G。
-  - `L0G_BL0CK_HDR_DATA_LEN`: 表示block中已经使用了多少字节，初始值为`12`（因为`log block body` 从第12个字节处开始)。随着往block中写入的redo日志越来也多，本属性值也跟着增长。如果`log block body `已经被全部写满，那么本属性的值被设置为`512`。
+  - `LOG_BLOCK_HDR_NO`: log buffer是由log block组成，在内部log buffer就好似一个数组，因此 LOG_BLOCK_HDR_NO 用来标记这个数组中的位置。其是递增并且循环使用的，占用4个字节，但是由于第一位用来判断是否是flush bit，所以最大的值为2G。
+  - `LOG_BLOCK_HDR_DATA_LEN`: 表示block中已经使用了多少字节，初始值为`12`（因为`log block body` 从第12个字节处开始)。随着往block中写入的redo日志越来也多，本属性值也跟着增长。如果`log block body`已经被全部写满，那么本属性的值被设置为`512`。
   - `LOG_BLOCK_FIRST_REC_GROUP`: 一条redo日志也可以称之为一条redo日志记录(redo log record)，一个mtr会生产多条redo日志记录，这些redo日志记录被称之为一个redo日志记录组(redo log record group)。LOG_BLOCK_FIRST_REC_GROUP 就代表该block中第一个mtr生成的redo日志记录组的偏移量（其实也就是这个block里第一个mtr生成的第一条redo日志的偏移量)。如果该值的大小和LOG_BLOCK_HDR_DATA_LEN相同，则表示当前log block不包含新的日志。
-  - `L0G_BL0CK_CHECKPOINT_No`：占用4字节，表示该log block最后被写时的`checkpoint`
+  - `LOG_BLOCK_CHECKPOINT_NO：占用4字节，表示该log block最后被写时的`checkpoint`。
   
 - log block trailer
   
@@ -2639,7 +2640,7 @@ SET SESSION TRANSACTION_ISOLATION = 'SERIALIZABLE';
 
 **相关参数设置**
 
-- `innodb_log_group_home_dir` ：指定 redo log 文件组所在的路径，默认值为 `./` ，表示在数据库 的数据目录下。MySQL的默认数据目录（ `var/lib/mysql`）下默认有两个名为 `ib_logfile0` 和 `ib_logfile1` 的文件，log buffer中的日志默认情况下就是刷新到这两个磁盘文件中。此redo日志 文件位置还可以修改。
+- `innodb_log_group_home_dir` ：指定 redo log 文件组所在的路径，默认值为 `./` ，表示在数据库的数据目录下。MySQL的默认数据目录（ `var/lib/mysql`）下默认有两个名为 `ib_logfile0` 和 `ib_logfile1` 的文件，log buffer中的日志默认情况下就是刷新到这两个磁盘文件中。此redo日志 文件位置还可以修改。
 
 - `innodb_log_files_in_group`：指明redo log file的个数，命名方式如：ib_logfile0，iblogfile1... iblogfilen。默认2个，最大100个。
 
@@ -2680,7 +2681,7 @@ innodb_log_file_size=200M
 
 从上边的描述中可以看到，磁盘上的`redo`日志文件不只一个，而是以一个`日志文件组`的形式出现的。这些文件以`ib_logfile[数字]`（数字可以是0、1、2)的形式进行命名，每个的redo日志文件大小都是一样的。
 
-在将redo日志写入日志文件组时，是从`ib_logfile0`开始写，如果`ib_1ogfile0`写满了，就接着`ib_1ogfile1` 写。同理，`ib_logfi1e1`写满了就去写`ib_1ogfile2`，依此类推。如果写到最后一个文件该昨办？那就重新转 到`ib_1ogfile0`继续写，所以整个过程如下图所示：
+在将redo日志写入日志文件组时，是从`ib_logfile0`开始写，如果`ib_1ogfile0`写满了，就接着`ib_1ogfile1` 写。同理，`ib_logfi1e1`写满了就去写`ib_1ogfile2`，依此类推。如果写到最后一个文件该昨办？那就重新转到`ib_1ogfile0`继续写，所以整个过程如下图所示：
 
 ![image-20240925130832626](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f39ad0defa0.png)
 
@@ -2771,6 +2772,8 @@ innodb_log_file_size=200M
 
 #### 7.3.5 两阶段提交
 
+##### 7.3.5.1 问题描述
+
 在执行更新语句过程，会记录redo log与binlog两块日志，以基本的事务为单位，redo log在事务执行过程中可以不断写入，而binlog只有在提交事务时才写入，所以redo log与binlog的 `写入时机` 不一样。
 
 ![image-20240926154149931](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f5103e6eaa1.png)
@@ -2787,9 +2790,17 @@ innodb_log_file_size=200M
 
 ![image-20220715195521986](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f50f18d3090.png)
 
+##### 7.3.5.2两阶段提交详解
+
 为了解决两份日志之间的逻辑一致问题，InnoDB存储引擎使用**两阶段提交**方案。原理很简单，将redo log的写入拆成了两个步骤prepare和commit，这就是**两阶段提交**。
 
+prepare 阶段：将 XID（内部 XA 事务的 ID） 写入到 redo log，同时将 redo log 对应的事务状态设置为 prepare，然后将 redo log 持久化到磁盘（innodb_flush_log_at_trx_commit = 1 的作用）。
+
+commit 阶段：把 XID 写入到 binlog，然后将 binlog 持久化到磁盘（sync_binlog = 1 的作用），接着调用引擎的提交事务接口，将 redo log 状态设置为 commit，此时该状态并不需要持久化到磁盘，只需要 write 到文件系统的 page cache 中就够了，因为只要 binlog 写磁盘成功，就算 redo log 的状态还是 prepare 也没有关系，一样会被认为事务已经执行成功。
+
 ![image-20220715195635196](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f50f1943df9.png)
+
+##### 7.3.5.3 效果
 
 使用两阶段提交后，写入binlog时发生异常也不会有影响，因为MySQL根据redo log日志恢复数据时，发现redo log还处于prepare阶段，并且没有对应binlog日志，就会回滚该事务。
 
@@ -2808,6 +2819,13 @@ innodb_log_file_size=200M
 #### 7.4.1 概念
 
 ​	`undo log`是事务**原子性**的保证，是一个**逻辑日志**。在事务中`更新数据`的`前置操作`其实是要先写入一个`undo log`。此外，**`undo log`会产生`redo log`**，也就是`undo log`的产生会伴随着`redo log`的产生，这是因为`undo log`也需要`持久性`的保护。
+
+MySQL 的 Undo Log 是以记录的形式存储的，每条记录包含以下信息：
+
+- **事务 ID**：标识是哪个事务进行了修改。
+- **表名和行 ID**：标识被修改的表和行。
+- **被修改的列**：只记录那些被修改的列的原始值和修改后的值。
+- **其他元数据**：如日志的类型（插入、更新、删除）等。
 
 #### 7.4.2 作用
 
@@ -2848,25 +2866,27 @@ INSERT INTO user (name) VALUES ("tom");
 
 **当我们执行UPDATE时：**
 
-对应更新的操作会产生update undo log，并且会分更新主键和不更新主键的，假设现在执行：
+对应更新的操作会产生update undo log，并且会分更新主键和不更新主键的。
 
-```
-UPDATE user SET name="Sun" WHERE id=1;
-```
+- 不更新主键
 
-![image-20240925140607905](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f3a8501faf7.png)
+  ```
+  UPDATE user SET name="Sun" WHERE id=1;
+  ```
 
-这时会把老的记录写入新的undo log，让回滚指针指向新的undo log，它的undo no是1，并且新的undo log会指向老的undo log（undo no=0）。
+  ![image-20240925140607905](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f3a8501faf7.png)
 
-假设现在执行：
+  这时会把老的记录写入新的undo log，让回滚指针指向新的undo log，它的undo no是1，并且新的undo log会指向老的undo log（undo no=0）。
 
-```
-UPDATE user SET id=2 WHERE id=1;
-```
+- 更新主键
 
-![image-20240925140825594](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f3a8d9cd721.png)
+  ```
+  UPDATE user SET id=2 WHERE id=1;
+  ```
 
-对于更新主键的操作，会先把原来的数据`deletemark`标识打开，这时并没有真正的删除数据，真正的删除会交给清理线程去判断，然后在后面插入一条新的数据，新的数据也会产生undo log，并且undo log的序号会递增。
+  ![image-20240925140825594](https://gitee.com/an_shiguang/learn-mysql/raw/master/4_notes/images/66f3a8d9cd721.png)
+
+  对于更新主键的操作，会先把原来的数据`deletemark`标识打开，这时并没有真正的删除数据，真正的删除会交给清理线程去判断，然后在后面插入一条新的数据，新的数据也会产生undo log，并且undo log的序号会递增。
 
 可以发现每次对数据的变更都会产生一个undo log，当一条记录被变更多次时，那么就会产生多条undo log，undo log记录的是变更前的日志，并且每个undo log的序号是递增的，那么当要回滚的时候，按照序号`依次向前推`，就可以找到我们的原始数据了。
 
@@ -2913,7 +2933,7 @@ mysql> show variables like 'innodb_undo_logs';
 
 - `innodb_undo_directory`: 设置rollback segment文件所在的路径。这意味着rollback segment可以存放在共享表空间以外的位置，即可以设置为独立表空间。该参数的默认值为`./`，表示当前InnoDB存储引擎的目
 - `innodb_undo_logs`: 设置rollback segment的个数，默认值为128。在InnoDB1.2版本中，该参数用来替换之前版本的参数innodb_rollback_segments。
-- `innodb_undo_tablespaces`：设置构成rollback segment文件的数量，这样rollback segment可以较为平均地 分布在多个文件中。设置该参数后，会在路径innodb_undo_directory看到undo为前缀的文件，该文件就代表 rollback segment文件。
+- `innodb_undo_tablespaces`：设置构成rollback segment文件的数量，这样rollback segment可以较为平均地分布在多个文件中。设置该参数后，会在路径innodb_undo_directory看到undo为前缀的文件，该文件就代表 rollback segment文件。
 
 undo log相关参数一般很少改动。
 
