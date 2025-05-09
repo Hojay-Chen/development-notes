@@ -1155,6 +1155,158 @@ Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环
 
 #### 5.1.2 实现
 
+##### 5.1.2.1 中断控制方法
+
+- interrupt()
+
+  ```java
+  public void interrupt();
+  ```
+
+  线程内部存在着一个名为interrupt flag的标识，如果一个线程被interrupt，那么它的flag将被设置。如果flag值为true的期间，调用了可中断方法（或者调用了可中断方法后线程进入中断状态），那么此时flag将直接被清除变为false，同时抛出InterruptedException异常。
+
+  > 可中断方法：
+  >
+  > Object的wait方法
+  >
+  > Object的wait(long)方法
+  >
+  > Object的wait(long, int)方法
+  >
+  > Thread的sleep(long)方法
+  >
+  > Thread的sleep(long, int)方法
+  >
+  > Thread的join方法
+  >
+  > Thread的join(long)方法
+  >
+  > Thread的join(long, int)方法
+  >
+  > InterruptibleChannel的io操作
+  >
+  > Selector的wakeup方法
+  >
+  > 其他方法
+
+- interrupted()
+
+  ```java
+  public static boolean interrupted();
+  ```
+
+  判断线程是否被中断，并清除当前中断状态。
+
+  注意该方法一共做了两件事：
+
+  1. 返回当前线程的中断状态，测试当前线程是否被中断
+  2. 将当前线程的中断状态清零并重新设置为false，清楚线程的中断状态
+
+  因此，如果连续两次调用该方法，无论第一次返回true还是false，第二次调用都是返回false。
+
+- isInterrupted()
+
+  ```java
+  public boolean isInterrupted();
+  ```
+
+  仅仅判断当前线程是否被中断。
+
+#### 5.1.3 使用
+
+##### 5.1.3.1 线程停止
+
+- volatile变量实现
+
+  ```java
+  public class InterruptDemo {
+      static volatile boolean isStop = false;
+      
+      public static void main(String[] args) {
+          new Thread(() -> {
+              while(true) {
+                  if(isStop) {
+                      System.out.println(Thread.currentThread().getName + "\t isStop被修改为true，程序停止");
+                      break;
+                  }
+                  System.out.println("t1 ---hello volatile");
+              }
+          }, name:"t1").start();
+          
+          try {
+              TimeUnit.MILLISECONDS.sleep(20);
+          } catch(InterruptedException e) {
+              e.printStackTrace();
+          }
+          
+          new Thread(() -> {
+              isStop = true;
+          }, name:"t2").start();
+      }
+  }
+  ```
+
+- AtomicBoolean类对象实现
+
+  ```java
+  public class InterruptDemo {
+      static AtomicBoolean atomicBoolean = new AtomicBoolean(false);
+      
+      public static void main(String[] args) {
+          new Thread(() -> {
+              while(true) {
+                  if(atomicBoolean.get()) {
+                      System.out.println(Thread.currentThread().getName + "\t atomicBoolean被修改为true，程序停止");
+                      break;
+                  }
+                  System.out.println("t1 ---hello atomicBoolean");
+              }
+          }, name:"t1").start();
+          
+          try {
+              TimeUnit.MILLISECONDS.sleep(20);
+          } catch(InterruptedException e) {
+              e.printStackTrace();
+          }
+          
+          new Thread(() -> {
+              atomicBoolean.set(true);
+          }, name:"t2").start();
+      }
+  }
+  ```
+
+- Thread类自带中断方法实现
+
+  ```java
+  public class InterruptDemo {
+      public static void main(String[] args) {
+          Thread t1 = new Thread(() -> {
+              while(true) {
+                  if(Thread.currentThread().isInterrupted()) {
+                      System.out.println(Thread.currentThread().getName + "\t isInterrupted()被修改为true，程序停止");
+                      break;
+                  }
+                  System.out.println("t1 ---hello interrupt api");
+              }
+          }, name:"t1");
+          t1.start();
+          
+          try {
+              TimeUnit.MILLISECONDS.sleep(20);
+          } catch(InterruptedException e) {
+              e.printStackTrace();
+          }
+          
+          new Thread(() -> {
+              t1.interrupt();
+          }, name:"t2").start();
+      }
+  }
+  ```
+
+  
+
 
 
 ### 5.2 CAS
