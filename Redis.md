@@ -1768,7 +1768,7 @@ Redis的主从复制主要由两种数据同步方式实现，分别是全量同
 
     > #### repl_ backlog_buffer
     >
-    > 增量同步主要依靠`repl_backlog_buffer`缓冲区实现，`repl_ backlog_buffer`是一个环形缓冲区，默认大小为1m。每个主节点都会维护一个唯一的`repl_backlog_buffer`缓冲区供所有从节点进行增量同步时查看，主节点会将写入命令存到这个缓冲区中，但是大小有限，写入的命令超过1m后，会覆盖之前的数据，因为是环形写入。
+    > 增量同步主要依靠`repl_backlog_buffer`缓冲区实现，`repl_backlog_buffer`是一个环形缓冲区，默认大小为1m。每个主节点都会维护一个唯一的`repl_backlog_buffer`缓冲区供所有从节点进行增量同步时查看，主节点会将写入命令存到这个缓冲区中，但是大小有限，写入的命令超过1m后，会覆盖之前的数据，因为是环形写入。
 
     - 如果从节点发送的offset在`repl_backlog_buffer`中已经被覆盖，则需要进行全量同步。因此可以调整`repl_backlog_buffer`大小，尽量避免出现全量同步。
     - 如果`repl_backlog_buffer`中存在offset对应的数据，则主节点查找对应offset之后的命令数据，写入到replication buffer中，最终将其发送给从节点，从节点受到指令数据后，执行这些指令，一次增量同步的过程就完成了。
@@ -1845,7 +1845,7 @@ Redis Sentinel 是分布式系统中监控 Redis 主从服务器，并提供主�
 
 #### 3.1.4 仲裁
 
-　　仲裁指的是配置文件中的 `quorum` 选项。某个 Sentinel 先将 Master 节点标记为主观下线，然后会将这个判定通过 `sentinel is-master-down-by-addr` 命令询问其他 Sentinel 节点是否也同样认为该 addr 的 Master 节点要做主观下线。最后当达成这一共识的 Sentinel 个数达到前面说的 `quorum` 设置的值时，该 Master 节点会被认定为客观下线并进行故障转移。
+　　仲裁指的是某个 Sentinel 先将 Master 节点标记为主观下线，然后会将这个判定通过 `sentinel is-master-down-by-addr` 命令询问其他 Sentinel 节点是否也同样认为该 addr 的 Master 节点要做主观下线。最后当达成这一共识的 Sentinel 个数达到配置文件中的 `quorum` 选项设置的值时，该 Master 节点会被认定为客观下线并进行故障转移。
 
 　　`quorum` 的值一般设置为 Sentinel 个数的**二分之一加 1**，例如 3 个 Sentinel 就设置为 2。
 
@@ -1860,7 +1860,7 @@ Redis Sentinel 是分布式系统中监控 Redis 主从服务器，并提供主�
 2. 在哨兵创建初期完成初始信息获取后，哨兵会进入持续监控阶段：
    - Sentinel与Redis Node：每个 Sentinel 节点会向主节点、从节点每**10秒一次**发送INFO REPLICATION命令来更新主从节点的状态信息。
    - Sentinel与Sentinel：基于 Redis 的订阅发布功能， 每个 Sentinel 节点会**每2秒一次**向主节点的hello 频道上发送该 Sentinel 节点对于主节点的判断以及当前 Sentinel 节点的信息 ，同时每个 Sentinel 节点也会订阅该频道， 来获取其他 Sentinel 节点的信息以及它们对主节点的判断。
-   - Sentinel会向所有主从节点和其他Sentinel**每秒一次**执行一次PING操作，来判断所有主从节点和其他Sentinel的连接状态。
+   - Sentinel会向所有主从节点和其他Sentinel**每1秒一次**执行一次PING操作，来判断所有主从节点和其他Sentinel的连接状态。
    - 当Master 被 Sentinel 标记为客观下线时，Sentinel 向下线的 Master 的所有 Slave 发送 INFO 命令的频率会从 10 秒一次改为每秒一次。
 
 #### 3.2.2 判定客观下线
@@ -1869,7 +1869,7 @@ Redis Sentinel 是分布式系统中监控 Redis 主从服务器，并提供主�
 
 2. 如果 master 节点回复 PING 命令的时间超过 down-after-milliseconds 设定的阈值（默认30s），则这个 master 会被 sentinel 标记为主观下线，修改其 flags 状态为SRI_S_DOWN。
 
-3. 当sentinel 哨兵节点将 master 标记为主观下线后，会向其余所有的 sentinel 发送sentinel is-master-down-by-addr消息，询问其他sentinel是否同意该master下线
+3. 当sentinel 哨兵节点将 master 标记为主观下线后，会向其余所有的 sentinel 发送sentinel is-master-down-by-addr命令，该命令基于TCP连接，用于询问其他sentinel是否同意该master下线
 
    > 发送命令：sentinel is-master-down-by-addr <ip> <port> <current_epoch> <runid>
    >
@@ -1877,29 +1877,33 @@ Redis Sentinel 是分布式系统中监控 Redis 主从服务器，并提供主�
    >
    > port：主观下线的服务端口
    >
-   > current_epoch：sentinel的纪元
+   > current_epoch：sentinel的纪元，是通过哨兵内部维护的一个全局变量：**current_epoch**，它由 Redis Sentinel 集群中的 **leader** 在每次故障转移准备阶段 **显式提升**，并广播给所有哨兵。该值用来保证同一个epoch中，每个sentinel只投票给唯一的sentinel竞选leader。
    >
    > runid：*表示检测服务下线状态，如果是sentinel的运行id，表示用来选举领头sentinel
 
-4. 每个sentinel收到命令之后，会根据发送过来的 ip和port 检查自己判断的结果，回复自己是否认为该master节点已经下线了
+4. 每个sentinel收到命令之后：
 
-   > 回复内容主要包含三个参数（由于上面发送的runid参数是*，这里先忽略后两个参数）
-   >
-   > down_state（1表示已下线，0表示未下线）
-   >
-   > leader_runid（领头sentinal id）
-   >
-   > leader_epoch（领头sentinel纪元）。
+   - 检查自己是否也认为 master 是 SDOWN：
+
+     - 是 → 可以继续；
+
+     - 否 → 返回错误或不投票；
+
+   - 检查当前 epoch 是否已经投过票：
+
+     - 没投 → 将当前请求者记录为 leader，并返回 `+OK`；
+
+     - 已投 → 返回 `-VOTE <runid>` 表示已经投过票了。
 
 5. sentinel收到回复之后，如果同意master节点进入主观下线的sentinel数量大于等于quorum，则master会被标记为客观下线，即认为该节点已经不可用。
 
-6. 在一般情况下，每个 Sentinel 每隔 10s 向所有的Master，Slave发送 INFO 命令。当Master 被 Sentinel 标记为客观下线时，Sentinel 向下线的 Master 的所有 Slave 发送 INFO 命令的频率会从 10 秒一次改为每秒一次。作用：发现最新的集群拓扑结构，以便快速发现是否有从节点可以被提升为新的主节点，从而完成故障转移。。
+6. 在一般情况下，每个 Sentinel 每隔 10s 向所有的Master，Slave发送 INFO 命令。当Master 被 Sentinel 标记为客观下线时，Sentinel 向下线的 Master 的所有 Slave 发送 INFO 命令的频率会从 10 秒一次改为每秒一次。作用：发现最新的集群拓扑结构，以便快速发现是否有从节点可以被提升为新的主节点，从而完成故障转移。
 
 #### 3.2.3 选举领头sentinel
 
 到现在为止，已经知道了master客观下线，那就需要一个sentinel来负责故障转移，那到底是哪个sentinel节点来做这件事呢？需要通过选举实现，具体的选举过程如下：
 
-1. 判断客观下线的sentinel节点向其他 sentinel 节点发送 SENTINEL is-master-down-by-addr ip port current_epoch runid
+1. 在判断客观下线过程中，sentinel节点向其他 sentinel 节点发送 SENTINEL is-master-down-by-addr ip port current_epoch runid
 
    注意：这时的runid是自己的run id，每个sentinel节点都有一个自己运行时id。
 
@@ -1911,17 +1915,48 @@ Redis Sentinel 是分布式系统中监控 Redis 主从服务器，并提供主�
 
 #### 3.2.4 故障转移
 
-有了领头sentinel之后，下面就是要做故障转移了，故障转移的一个主要问题和选择领头sentinel问题差不多，到底要选择哪一个slaver节点来作为master呢？按照我们一般的常识，我们会认为哪个slave节点中的数据和master中的数据相识度高哪个slaver就是master了，其实哨兵模式也差不多是这样判断的，不过还有别的判断条件，详细介绍如下：
+有了领头sentinel之后，下面就是要做故障转移了，故障转移前需要选择一个slaver节点来作为master，判断过程如下：
 
 1. 在进行选择之前需要先剔除掉一些不满足条件的slaver，这些slaver不会作为变成master的备选：
-   - 剔除列表中已经下线的从服务。
-   - 剔除有5s没有回复sentinel的info命令的slave。
-   - 剔除与已经下线的主服务连接断开时间超过 down-after-milliseconds * 10 + master宕机时长的slaver。
 
-2. 选主过程：
-   - 选择优先级最高的节点，通过从节点的配置文件中的replica-priority配置项，这个参数越小，表示优先级越高。
-   - 如果第一步中的优先级相同，选择offset最大的，offset表示主节点向从节点同步数据的偏移量，越大表示同步的数据越多。
-   - 如果第二步offset也相同，选择run id较小的。
+   - 与主节点断联时间过长的从节点
+
+     如果 slave 与 master 断联超过配置项`down-after-milliseconds`，Sentinel 会认为它“脱节太严重”，不信任它的数据。因为这个 slave 可能落后太多，成为新主后会造成数据不一致。
+
+   - 复制延迟过大的从节点
+
+     sentinel 会根据 slave 的 `master_link_down_time` 和 `slave_repl_offset` 来判断它的同步状态。如果某个 slave 落后其他节点太多，它将被剔除。
+
+   - 网络不通或 PING 响应异常的从节点
+
+     Sentinel 会周期性地向 slave 发 PING。如果该 slave 自身状态为 `s_down` 或网络不可达，也会被排除。
+
+   - 配置 `slave-priority` = 0 的从节点
+
+     每个 Redis slave 节点在配置中可以设置：
+
+     ```
+     slave-priority 0
+     ```
+
+     这表示它永远不会被提升为 master；
+
+     这种配置常用于：
+
+     - 专用于只读请求的 slave；
+     - 物理性能较弱的 slave；
+     - 延迟同步备份节点。
+
+   - Redis Sentinel 检测结果不一致的从节点
+
+     如果该 slave 只被一部分 Sentinel 监控，导致其他哨兵对它不信任或不了解，也可能不会被选入候选集。
+
+2. 选主过程（前一个判断相同才会进入下一个判断）：
+
+   1. slave-priority 越小越优先（但 ≠ 0）；
+   2. 偏移量越接近 master（同步最全）越优先；
+   3. `master_link_down_time` 越短越优先；
+   4. runid 字典序最小者作为最终备选（如果前面完全相等）。
 
 #### 3.2.5 修改配置
 
