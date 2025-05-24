@@ -1042,6 +1042,7 @@ public static BrokerController buildBrokerController(String[] args) throws Excep
         MixAll.properties2Object(properties, authConfig);
     }
 
+    // 将命令行的配置信息提取并赋值给brokerConfig对象，这里命令行的配置信息优先级是高于配置文件的配置信息的。
     MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), brokerConfig);
     if (null == brokerConfig.getRocketmqHome()) {
         System.out.printf("Please set the %s variable in your environment " +
@@ -1049,11 +1050,13 @@ public static BrokerController buildBrokerController(String[] args) throws Excep
         System.exit(-2);
     }
 
-    // Validate namesrvAddr
+    // 对NameServer地址合法性检查
     String namesrvAddr = brokerConfig.getNamesrvAddr();
     if (StringUtils.isNotBlank(namesrvAddr)) {
         try {
+            // 这里表示支持多个NameServer地址，通过“；”符号进行分隔
             String[] addrArray = namesrvAddr.split(";");
+            // 逐个地址进行检查，若地址有误，string2SocketAddress会报错。
             for (String addr : addrArray) {
                 NetworkUtil.string2SocketAddress(addr);
             }
@@ -1064,6 +1067,7 @@ public static BrokerController buildBrokerController(String[] args) throws Excep
         }
     }
 
+    
     if (BrokerRole.SLAVE == messageStoreConfig.getBrokerRole()) {
         int ratio = messageStoreConfig.getAccessMessageInMemoryMaxRatio() - 10;
         messageStoreConfig.setAccessMessageInMemoryMaxRatio(ratio);
