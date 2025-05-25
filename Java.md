@@ -1738,6 +1738,8 @@ AQS 是一个用来构建锁和同步器的公共基础部分的抽象实现，�
 
 ![AQS_ivnsdjo](E:\各种资料\Java开发笔记\我的笔记\images\AQS_ivnsdjo.png)
 
+
+
 ###### 6.4.2.1.1 状态变量 `state`
 
 ```java
@@ -1773,6 +1775,8 @@ protected final boolean compareAndSetState(int expect, int update) {
 
 其中，`compareAndSetState` 是一个原子操作，依赖于底层的 `Unsafe` 类，通过 CAS（Compare-And-Swap）机制确保并发修改的正确性。
 
+
+
 ###### 6.4.2.1.2 等待队列（FIFO 双向队列）
 
 当线程获取同步资源失败时，AQS 会将其封装成一个 `Node` 对象，加入到一个 FIFO 的 **等待队列（CLH 队列）** 中，直到它被唤醒。
@@ -1787,7 +1791,9 @@ private transient volatile Node head;
 private transient volatile Node tail;
 ```
 
-##### 6.4.2.1.3 Node 节点结构
+
+
+###### 6.4.2.1.3 Node 节点结构
 
 每个节点表示一个等待获取资源的线程，并保存着线程自身和前驱、后继节点的引用。结构如下：
 
@@ -1815,9 +1821,31 @@ static final class Node {
 - `thread`：记录当前节点关联的线程。
 - `nextWaiter`：用于 `Condition` 条件队列，不同于阻塞队列的 `next`。
 
-##### 6.4.2.1.4 加锁流程
+
+
+##### 6.4.2.2 加锁流程
 
 **独占式锁**
+
+获得锁的方法（包含尝试获得锁和获得锁失败排队）：
+
+```java
+public final void acquire(int arg) {
+    if (!tryAcquire(arg) &&
+        acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+        selfInterrupt();
+}
+```
+
+尝试获得锁的方法需要AQS的实现类来实现，如下：
+
+```java
+protected boolean tryAcquire(int arg) {
+    throw new UnsupportedOperationException();
+}
+```
+
+当获取锁
 
 
 
@@ -1837,14 +1865,16 @@ static final class Node {
 
 
 
-##### 6.4.2.1.5 解锁流程
+##### 6.4.2.3 解锁流程
 
 当持有锁的线程调用 `unlock()`：
 
 1. **调用 `tryRelease()`** 修改 `state` 为 0。
 2. **唤醒后继节点**：如果有后继节点，则调用 `LockSupport.unpark()` 唤醒队列中的下一个线程。
 
-##### 6.4.2.1.6 支持的同步模式
+
+
+##### 6.4.2.4 支持的同步模式
 
 AQS 支持两种同步模式：
 
@@ -2615,7 +2645,200 @@ public class AccountingSync2 implements Runnable {
 
 #### 7.4.2 原理
 
-##### 1. 内部结构：基于 AQS（AbstractQueuedSynchronizer）
+##### 7.4.2.1 如何基于AQS实现类 
+
+`ReentrantLock` 的锁实现是基于 `AQS` 的实现类的，因此需要先了解AQS思想和AQS接口：[跳转AQS介绍](###6.4 AQS)。
+
+`ReentrantLock` 和 `AQS` 的体系架构图如下图：
+
+![AQS_omvdjsn](E:\各种资料\Java开发笔记\我的笔记\images\AQS_omvdjsn.png)
+
+从架构图可以看到，`ReentrantLock` 有内部类 `Sync` 实现了 `AQS` 接口，但是 `ReentrantLock` 的实现并不直接依赖内部类 `Sync` ，而是在 `ReentrantLock` **内部定义了一个 `Sync` 类型属性：**
+
+```java
+public class ReentrantLock implements Lock, java.io.Serializable {
+    private final Sync sync;
+}
+```
+
+然后又定义了 `NonfairSync` 和 `FairSync` 这两个内部类实现 `Sync` 赋值给该 `Sync` 属性，分别表示非公平锁和公平锁，并且 `ReentrantLock` 所有方法都是通过 `Sync` 的实现类实现的，比如 `lock()` 方法源码如下：
+
+```java
+public class ReentrantLock implements Lock, java.io.Serializable {
+    public void lock() {
+        sync.lock();
+    }
+}
+```
+
+而 `Sync` 这个内部类本身仅仅提供抽象方法并不实现 `lock()` 方法，而是交给其实现类 `FairSync` 和 `NonfairSync` 来实现：
+
+> 该 `lock()` 方法并非从AQS接口继承而来，而是 `Sync` 类自己定义的抽象方法。
+
+```java
+public class ReentrantLock implements Lock, java.io.Serializable {
+	abstract static class Sync extends AbstractQueuedSynchronizer {
+        abstract void lock();
+    }
+}
+```
+
+通过构造器使得在创建 `ReentrantLock` 对象的时候就会决定该 `Sync` 类型属性引用的是公平锁还是非公平锁对象，源码如下：
+
+```java
+public class ReentrantLock implements Lock, java.io.Serializable {
+	public ReentrantLock() {
+        sync = new NonfairSync();
+    }
+
+    public ReentrantLock(boolean fair) {
+        sync = fair ? new FairSync() : new NonfairSync();
+    }
+}
+```
+
+由 `ReentrantLock` 的构造器可见， `ReentrantLock` 对象默认采用非公平锁来实现，可以通过调用带参构造器来决定使用公平锁或非公平锁。
+
+##### 7.4.2.2 ASQ的实现类介绍
+
+上面已经介绍到 `ReentrantLock` 的所有方法是调用 `Sync` 的 `lock()` 抽象方法，而其中的 `lock()` 方法由 `Sync` 的实现类 `FairSync` 和 `NonfairLock` 来实现。
+
+`Sync` 类实现如下：
+
+```java
+public class ReentrantLock implements Lock, java.io.Serializable {
+	abstract static class Sync extends AbstractQueuedSynchronizer {
+        private static final long serialVersionUID = -5179523762034025860L;
+
+        abstract void lock();
+
+        final boolean nonfairTryAcquire(int acquires) {
+            final Thread current = Thread.currentThread();
+            int c = getState();
+            if (c == 0) {
+                if (compareAndSetState(0, acquires)) {
+                    setExclusiveOwnerThread(current);
+                    return true;
+                }
+            }
+            else if (current == getExclusiveOwnerThread()) {
+                int nextc = c + acquires;
+                if (nextc < 0) // overflow
+                    throw new Error("Maximum lock count exceeded");
+                setState(nextc);
+                return true;
+            }
+            return false;
+        }
+
+        protected final boolean tryRelease(int releases) {
+            int c = getState() - releases;
+            if (Thread.currentThread() != getExclusiveOwnerThread())
+                throw new IllegalMonitorStateException();
+            boolean free = false;
+            if (c == 0) {
+                free = true;
+                setExclusiveOwnerThread(null);
+            }
+            setState(c);
+            return free;
+        }
+
+        protected final boolean isHeldExclusively() {
+            return getExclusiveOwnerThread() == Thread.currentThread();
+        }
+
+        final ConditionObject newCondition() {
+            return new ConditionObject();
+        }
+        
+        final Thread getOwner() {
+            return getState() == 0 ? null : getExclusiveOwnerThread();
+        }
+
+        final int getHoldCount() {
+            return isHeldExclusively() ? getState() : 0;
+        }
+
+        final boolean isLocked() {
+            return getState() != 0;
+        }
+
+        private void readObject(java.io.ObjectInputStream s)
+            throws java.io.IOException, ClassNotFoundException {
+            s.defaultReadObject();
+            setState(0); // reset to unlocked state
+        }
+    }
+}
+```
+
+该类定义了**获取锁**、**非公平地尝试占有锁**、**尝试释放锁**、**判断当前线程是否占有锁**、**获取Condition类**、**获取当前占有锁的类**、获取当前state的值、判断当前是否上锁等方法。
+
+`NonfairLock` 类实现如下：
+
+```java
+public class ReentrantLock implements Lock, java.io.Serializable {
+	static final class NonfairSync extends Sync {
+        private static final long serialVersionUID = 7316153563782823691L;
+
+        final void lock() {
+            if (compareAndSetState(0, 1))
+                setExclusiveOwnerThread(Thread.currentThread());
+            else
+                acquire(1);
+        }
+
+        protected final boolean tryAcquire(int acquires) {
+            return nonfairTryAcquire(acquires);
+        }
+    }
+}
+```
+
+该类实现了 `Sync` 类的 `lock()` 抽象方法，同时定义了 `tryAcquire` 这个尝试获取锁的方法，由于是非公平锁，因此直接调用 `Sync` 类提供的非公平地尝试获取锁的方法。
+
+`FairLock` 类实现如下：
+
+```java
+public class ReentrantLock implements Lock, java.io.Serializable {
+    static final class FairSync extends Sync {
+        private static final long serialVersionUID = -3000897897090466540L;
+
+        final void lock() {
+            acquire(1);
+        }
+
+        protected final boolean tryAcquire(int acquires) {
+            final Thread current = Thread.currentThread();
+            int c = getState();
+            if (c == 0) {
+                if (!hasQueuedPredecessors() &&
+                    compareAndSetState(0, acquires)) {
+                    setExclusiveOwnerThread(current);
+                    return true;
+                }
+            }
+            else if (current == getExclusiveOwnerThread()) {
+                int nextc = c + acquires;
+                if (nextc < 0)
+                    throw new Error("Maximum lock count exceeded");
+                setState(nextc);
+                return true;
+            }
+            return false;
+        }
+    }
+}
+```
+
+该类实现了 `Sync` 类的 `lock()` 抽象方法，同时定义了 `tryAcquire` 这个尝试获取锁的方法，并且是以公平锁的原理来实现。
+
+##### 7.4.2.3 
+
+
+
+
 
 `ReentrantLock` 的核心是基于 AQS（AbstractQueuedSynchronizer）实现的，它将锁的控制逻辑抽象为一个状态值和一个 FIFO 队列来管理锁竞争线程。
 
@@ -2703,9 +2926,7 @@ public ReentrantLock(boolean fair) {
 }
 ```
 
-ReentrantLock和AQS的体系架构图如下图：
 
-![AQS_omvdjsn](E:\各种资料\Java开发笔记\我的笔记\images\AQS_omvdjsn.png)
 
 
 
