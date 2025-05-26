@@ -1169,7 +1169,7 @@ Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环
 
   - 如果线程处于**正常活动状态**，那么会将该线程的**中断标志设置为true**，仅此而已。被设置中断标志的线程将继续正常运行，不受影响。所以，interrupt()并不能真正的中断线程，需要被调用的线程自己进行配合才行。
 
-    当线程的中断标志位设置为true后，如果进入了阻塞状态，那么就会立刻将中断标志位
+    当线程的中断标志位设置为true后，如果执行了可中断的阻塞代码（下面有举例），那么就会立刻清除中断标志位并设置为false，然后不进入阻塞状态直接继续执行代码。
 
   - 如果线程处于**被阻塞状态**（即调用如下例举的可中断方法），在别的线程中调用当前线程对象的interrupt方法，那么线程将立即**退出被阻塞的状态**，**清除标志位**并**抛出一个InterruptedException异常**。
 
@@ -1195,7 +1195,11 @@ Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环
   >
   > Selector的wakeup方法
   >
+  > TimeUnit中的sleep()方法
+  >
   > 其他方法
+
+  **注意：**LockSupport中的park()方法也会被interrupt()方法中断，但是不会将中断标记清除并设置为false，而是继续保持true，并且不会抛出InterruptedException异常。
 
 - interrupted()
 
@@ -1817,9 +1821,25 @@ static final class Node {
 **关键字段说明：**
 
 - `waitStatus`：标记当前节点的状态，如是否需要被唤醒或已取消等。
+
+  | 枚举      | 含义                                           |
+  | :-------- | :--------------------------------------------- |
+  | 0         | 当一个Node被初始化的时候的默认值               |
+  | CANCELLED | 为1，表示线程获取锁的请求已经取消了            |
+  | CONDITION | 为-2，表示节点在等待队列中，节点线程等待唤醒   |
+  | PROPAGATE | 为-3，当前线程处在SHARED情况下，该字段才会使用 |
+  | SIGNAL    | 为-1，表示线程已经准备好了，就等资源释放了     |
+
 - `prev` / `next`：双向链表，用于维护阻塞队列。
+
 - `thread`：记录当前节点关联的线程。
-- `nextWaiter`：用于 `Condition` 条件队列，不同于阻塞队列的 `next`。
+
+- `nextWaiter`：用于 `Condition` 条件队列的下一个节点，不同于阻塞队列的 `next`。
+
+  | 模式      | 含义                           |
+  | :-------- | :----------------------------- |
+  | SHARED    | 表示线程以共享的模式等待锁     |
+  | EXCLUSIVE | 表示线程正在以独占的方式等待锁 |
 
 
 
@@ -1827,31 +1847,11 @@ static final class Node {
 
 **独占式锁**
 
-获得锁的方法（包含尝试获得锁和获得锁失败排队）：
-
-```java
-public final void acquire(int arg) {
-    if (!tryAcquire(arg) &&
-        acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
-        selfInterrupt();
-}
-```
-
-尝试获得锁的方法需要AQS的实现类来实现，如下：
-
-```java
-protected boolean tryAcquire(int arg) {
-    throw new UnsupportedOperationException();
-}
-```
-
-当获取锁
-
-
+![AQS_onvoab](E:\各种资料\Java开发笔记\我的笔记\images\AQS_onvoab.png)
 
 当一个线程尝试获取独占锁（如 ReentrantLock）时，流程如下：
 
-1. **尝试获取锁**：调用 `tryAcquire()` 尝试直接修改 `state`。
+1. **尝试获取锁**：调用 `tryAcquire()` 尝试直接获取锁（该方法由实现类实现），若成功则直接结束流程。
 2. **失败则排队**：如果失败，则创建一个 `Node` 并加入等待队列。
 3. **阻塞等待**：线程通过 `LockSupport.park()` 进入等待状态。
 4. **唤醒尝试获取**：前驱节点释放锁后，唤醒后继节点，该线程再次尝试获取锁。
@@ -1867,10 +1867,15 @@ protected boolean tryAcquire(int arg) {
 
 ##### 6.4.2.3 解锁流程
 
-当持有锁的线程调用 `unlock()`：
+**独占式锁**
 
-1. **调用 `tryRelease()`** 修改 `state` 为 0。
-2. **唤醒后继节点**：如果有后继节点，则调用 `LockSupport.unpark()` 唤醒队列中的下一个线程。
+![AQS_ocbnas](E:\各种资料\Java开发笔记\我的笔记\images\AQS_ocbnas.png)
+
+
+
+**共享式锁**
+
+
 
 
 
@@ -2643,6 +2648,8 @@ public class AccountingSync2 implements Runnable {
 
 `ReentrantLock` 支持线程**重入**，即同一线程可以多次获得同一把锁，每获得一次锁计数器加一，释放时计数器减一，直到归零才真正释放锁。
 
+
+
 #### 7.4.2 原理
 
 ##### 7.4.2.1 如何基于AQS实现类 
@@ -2834,149 +2841,23 @@ public class ReentrantLock implements Lock, java.io.Serializable {
 
 该类实现了 `Sync` 类的 `lock()` 抽象方法，同时定义了 `tryAcquire` 这个尝试获取锁的方法，并且是以公平锁的原理来实现。
 
-##### 7.4.2.3 
+##### 7.4.2.3 获取锁
 
+获取锁的源码结构如下：
 
+![ReentrantLock_opqnd](E:\各种资料\Java开发笔记\我的笔记\images\ReentrantLock_opqnd.png)
 
+这里不对 `AQS` 的源码内容占用过多篇章，可跳转AQS查看AQS相关方法及其实现细节：[跳转到AQS介绍](###6.4 AQS)。
 
+##### 7.4.2.4 释放锁
 
-`ReentrantLock` 的核心是基于 AQS（AbstractQueuedSynchronizer）实现的，它将锁的控制逻辑抽象为一个状态值和一个 FIFO 队列来管理锁竞争线程。
+释放锁的源码结构如下：
 
-`ReentrantLock` 有一个作为锁的内部类 `Sync` ，是一个继承自 `AbstractQueuedSynchronizer` 的内部类，同时创建了一个该类型的属性变量：
+![ReentrantLock_onxsan](E:\各种资料\Java开发笔记\我的笔记\images\ReentrantLock_onxsan.png)
 
-```java
-abstract static class Sync extends AbstractQueuedSynchronizer { ... }
+这里不对 `AQS` 的源码内容占用过多篇章，可跳转AQS查看AQS相关方法及其实现细节：[跳转到AQS介绍](###6.4 AQS)。
 
-final Sync sync;
-```
-
-`ReentrantLock` 内部有 `Sync` 类的两个实现类：
-
-- **NonfairSync**：非公平锁，默认。其lock()、tryAcquire(int acquires)方法采用非公平方式实现：
-
-  ```java
-  final void lock() {
-      if (compareAndSetState(0, 1))
-          setExclusiveOwnerThread(Thread.currentThread());
-      else
-          acquire(1);
-  }
-  
-  protected final boolean tryAcquire(int acquires) {
-      return nonfairTryAcquire(acquires);
-  }
-  
-  final boolean nonfairTryAcquire(int acquires) {
-      final Thread current = Thread.currentThread();
-      int c = getState();
-      if (c == 0) {
-          if (compareAndSetState(0, acquires)) {
-              setExclusiveOwnerThread(current);
-              return true;
-          }
-      }
-      else if (current == getExclusiveOwnerThread()) {
-          int nextc = c + acquires;
-          if (nextc < 0) // overflow
-              throw new Error("Maximum lock count exceeded");
-          setState(nextc);
-          return true;
-      }
-      return false;
-  }
-  ```
-
-- **FairSync**：公平锁，按先后顺序排队。其lock()、tryAcquire(int acquires)方法采用公平方式实现：
-
-  ```java
-  final void lock() {
-      acquire(1);
-  }
-  
-  protected final boolean tryAcquire(int acquires) {
-      final Thread current = Thread.currentThread();
-      int c = getState();
-      if (c == 0) {
-          if (!hasQueuedPredecessors() &&
-              compareAndSetState(0, acquires)) {
-              setExclusiveOwnerThread(current);
-              return true;
-          }
-      }
-      else if (current == getExclusiveOwnerThread()) {
-          int nextc = c + acquires;
-          if (nextc < 0)
-              throw new Error("Maximum lock count exceeded");
-          setState(nextc);
-          return true;
-      }
-      return false;
-  }
-  ```
-
-在 `ReentrantLock` 的构造方法在构造对象时就会决定使用哪一种 `AQS` ，源码如下：
-
-```java
-public ReentrantLock() {
-    sync = new NonfairSync();
-}
-
-public ReentrantLock(boolean fair) {
-    sync = fair ? new FairSync() : new NonfairSync();
-}
-```
-
-
-
-
-
-##### 2. 获取锁（lock）
-
-调用 `lock()` 会触发如下流程：
-
-- 非公平锁：`NonfairSync` 直接使用 `compareAndSetState(0, 1)` 尝试获取锁，不管队列里有没有其他线程，争抢成功就进入临界区。
-- 公平锁：`FairSync` 先检查队列是否为空或当前线程是否排在队首，确保先来先得。
-
-获取失败的线程会进入 AQS 的等待队列，并阻塞（通过 `LockSupport.park()`）等待唤醒。
-
-```java
-public void lock() {
-    sync.acquire(1);
-}
-```
-
-其中 `acquire(1)` 会尝试执行 `tryAcquire()`，失败则进入队列。
-
-##### 3. 可重入性原理
-
-在 `tryAcquire()` 中，如果当前线程已经持有锁（`getState() != 0 && getExclusiveOwnerThread() == current`），就可以将锁状态 `state` 增加，表示重入。
-
-```java
-if (getState() == 0) {
-    if (compareAndSetState(0, 1)) {
-        setExclusiveOwnerThread(current);
-        return true;
-    }
-} else if (getExclusiveOwnerThread() == current) {
-    setState(getState() + 1);
-    return true;
-}
-```
-
-##### 4. 释放锁（unlock）
-
-调用 `unlock()` 实际上会调用 `sync.release(1)`，其内部调用 `tryRelease(1)`：
-
-- 减少 `state` 的值（即锁的持有次数）
-- 如果减到 0，表示彻底释放锁，清空持有线程，并唤醒等待队列中的下一个线程（通过 `LockSupport.unpark()`）
-
-```java
-public void unlock() {
-    sync.release(1);
-}
-```
-
-##### 5. 公平与非公平模式
+##### 7.4.2.5 公平与非公平模式
 
 - **非公平锁（默认）**：抢锁优先，性能高，但可能造成“线程饿死”。
 - **公平锁**：排队获取，线程调度更公平，但性能略低。
@@ -2988,7 +2869,7 @@ ReentrantLock lock1 = new ReentrantLock();        // 非公平锁
 ReentrantLock lock2 = new ReentrantLock(true);    // 公平锁
 ```
 
-##### 6. Condition 支持
+##### 7.4.2.6 Condition 支持
 
 相比 `synchronized` 只能使用 `Object.wait()/notify()`，`ReentrantLock` 通过 `newCondition()` 支持**多个条件等待队列**：
 
