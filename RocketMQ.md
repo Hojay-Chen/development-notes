@@ -839,7 +839,6 @@ RocketMQ的路由发现采用的是Pull模型。当Topic路由信息出现变化
 | ------------------------ | ------------------------------------------------------------ |
 | `BrokerStartup`          | **Broker 启动类**，启动流程入口，配置加载 -> 控制器初始化 -> 启动服务。 |
 | `BrokerController`       | **Broker 核心控制器**，集中管理各类服务、调度线程、配置加载等，Broker 的大脑。 |
-|                          |                                                              |
 | `BrokerPathConfigHelper` | Broker 路径相关配置辅助类。                                  |
 | `BrokerPreOnlineService` | Broker 预上线服务，如注册前的准备工作、环境检查等。          |
 | `RocksDBConfigManager`   | 如果使用 RocksDB 作为存储引擎或索引引擎，此类用于管理其配置。 |
@@ -1003,62 +1002,65 @@ public static BrokerController createBrokerController(String[] args) {
 
 ```java
 public static BrokerController buildBrokerController(String[] args) throws Exception {
+
+    // 【1】设置远程通信版本（Netty Remoting 的版本控制）
     System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
 
-    // 初始化配置信息对象，此时这些对象的配置信息为默认值
-    final BrokerConfig brokerConfig = new BrokerConfig();
-    final NettyServerConfig nettyServerConfig = new NettyServerConfig();
-    final NettyClientConfig nettyClientConfig = new NettyClientConfig();
-    final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
-    final AuthConfig authConfig = new AuthConfig();
-    nettyServerConfig.setListenPort(10911);
-    messageStoreConfig.setHaListenPort(0);
+    // 【2】初始化核心配置类对象（配置信息默认为默认值）
+    final BrokerConfig brokerConfig = new BrokerConfig();                  // Broker基本配置
+    final NettyServerConfig nettyServerConfig = new NettyServerConfig();  // Netty服务端配置（监听端口等）
+    final NettyClientConfig nettyClientConfig = new NettyClientConfig();  // Netty客户端配置
+    final MessageStoreConfig messageStoreConfig = new MessageStoreConfig(); // 消息存储配置
+    final AuthConfig authConfig = new AuthConfig();                       // 认证授权配置
+    nettyServerConfig.setListenPort(10911);        // 默认监听端口
+    messageStoreConfig.setHaListenPort(0);         // 高可用默认端口初始化为 0
 
+    // 【3】构建命令行参数解析对象（Options）并解析命令行参数
     Options options = ServerUtil.buildCommandlineOptions(new Options());
     CommandLine commandLine = ServerUtil.parseCmdLine(
         "mqbroker", args, buildCommandlineOptions(options), new DefaultParser());
     if (null == commandLine) {
-        System.exit(-1);
+        System.exit(-1); // 如果命令行解析失败，直接退出
     }
 
+    // 【4】如果通过 -c 指定了配置文件路径，则读取该文件并解析为 Properties 对象
     Properties properties = null;
-    // 这里借助内部类SystemConfigFileHelper对象进行配置信息读取，读取到properties变量
     if (commandLine.hasOption('c')) {
         String file = commandLine.getOptionValue('c');
         if (file != null) {
-            CONFIG_FILE_HELPER.setFile(file);
-            BrokerPathConfigHelper.setBrokerConfigPath(file);
-            properties = CONFIG_FILE_HELPER.loadConfig();
+            CONFIG_FILE_HELPER.setFile(file);                   // 设置配置文件路径
+            BrokerPathConfigHelper.setBrokerConfigPath(file);   // 供其他模块使用
+            properties = CONFIG_FILE_HELPER.loadConfig();       // 加载配置文件为 Properties
         }
     }
-	
-    // 若从配置文件读取到配置信息，则更新到系统环境，同时更新到配置信息对象中
+
+    // 【5】将配置文件中的配置项注入到对应配置对象中
     if (properties != null) {
-        properties2SystemEnv(properties);
-        MixAll.properties2Object(properties, brokerConfig);
-        MixAll.properties2Object(properties, nettyServerConfig);
-        MixAll.properties2Object(properties, nettyClientConfig);
-        MixAll.properties2Object(properties, messageStoreConfig);
-        MixAll.properties2Object(properties, authConfig);
+        properties2SystemEnv(properties);                           // 配置项写入系统环境变量
+        MixAll.properties2Object(properties, brokerConfig);         // 更新 Broker 配置
+        MixAll.properties2Object(properties, nettyServerConfig);    // 更新 Netty 服务端配置
+        MixAll.properties2Object(properties, nettyClientConfig);    // 更新 Netty 客户端配置
+        MixAll.properties2Object(properties, messageStoreConfig);   // 更新存储配置
+        MixAll.properties2Object(properties, authConfig);           // 更新认证配置
     }
 
-    // 将命令行的配置信息提取并赋值给brokerConfig对象，这里命令行的配置信息优先级是高于配置文件的配置信息的。
+    // 【6】命令行参数覆盖配置文件（命令行优先级更高）
     MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), brokerConfig);
+
+    // 【7】校验环境变量是否设置 RocketMQ_HOME，否则退出
     if (null == brokerConfig.getRocketmqHome()) {
         System.out.printf("Please set the %s variable in your environment " +
             "to match the location of the RocketMQ installation", MixAll.ROCKETMQ_HOME_ENV);
         System.exit(-2);
     }
 
-    // 对NameServer地址合法性检查
+    // 【8】校验 NameServer 地址合法性（支持多个地址，使用“;”分隔）
     String namesrvAddr = brokerConfig.getNamesrvAddr();
     if (StringUtils.isNotBlank(namesrvAddr)) {
         try {
-            // 这里表示支持多个NameServer地址，通过“；”符号进行分隔
             String[] addrArray = namesrvAddr.split(";");
-            // 逐个地址进行检查，若地址有误，string2SocketAddress会报错。
             for (String addr : addrArray) {
-                NetworkUtil.string2SocketAddress(addr);
+                NetworkUtil.string2SocketAddress(addr); // 若非法会抛出异常
             }
         } catch (Exception e) {
             System.out.printf("The Name Server Address[%s] illegal, please set it as follows, " +
@@ -1067,13 +1069,13 @@ public static BrokerController buildBrokerController(String[] args) throws Excep
         }
     }
 
-    
+    // 【9】若当前角色为 SLAVE，则下调访问内存中消息比例，减轻系统负担
     if (BrokerRole.SLAVE == messageStoreConfig.getBrokerRole()) {
         int ratio = messageStoreConfig.getAccessMessageInMemoryMaxRatio() - 10;
         messageStoreConfig.setAccessMessageInMemoryMaxRatio(ratio);
     }
 
-    // Set broker role according to ha config
+    // 【10】根据 brokerRole 设置 brokerId（只有主节点是 0）
     if (!brokerConfig.isEnableControllerMode()) {
         switch (messageStoreConfig.getBrokerRole()) {
             case ASYNC_MASTER:
@@ -1091,21 +1093,26 @@ public static BrokerController buildBrokerController(String[] args) throws Excep
         }
     }
 
+    // 【11】若启用了 DLeger 日志（分布式日志复制），则 brokerId 为 -1
     if (messageStoreConfig.isEnableDLegerCommitLog()) {
         brokerConfig.setBrokerId(-1);
     }
 
+    // 【12】DLeger 和 控制器模式不可同时启用
     if (brokerConfig.isEnableControllerMode() && messageStoreConfig.isEnableDLegerCommitLog()) {
         System.out.printf("The config enableControllerMode and enableDLegerCommitLog cannot both be true.%n");
         System.exit(-4);
     }
 
+    // 【13】若没有显式设置 HA 监听端口，则默认监听端口 + 1
     if (messageStoreConfig.getHaListenPort() <= 0) {
         messageStoreConfig.setHaListenPort(nettyServerConfig.getListenPort() + 1);
     }
 
+    // 【14】设置 broker 是否运行在容器环境中（false 代表不是）
     brokerConfig.setInBrokerContainer(false);
 
+    // 【15】设置 broker 的日志目录（是否隔离日志目录）
     System.setProperty("brokerLogDir", "");
     if (brokerConfig.isIsolateLogEnable()) {
         System.setProperty("brokerLogDir", brokerConfig.getBrokerName() + "_" + brokerConfig.getBrokerId());
@@ -1114,6 +1121,7 @@ public static BrokerController buildBrokerController(String[] args) throws Excep
         System.setProperty("brokerLogDir", brokerConfig.getBrokerName() + "_" + messageStoreConfig.getdLegerSelfId());
     }
 
+    // 【16】打印配置（-p 打印配置项，-m 打印含注释的默认项），然后退出
     if (commandLine.hasOption('p')) {
         Logger console = LoggerFactory.getLogger(LoggerName.BROKER_CONSOLE_NAME);
         MixAll.printObjectProperties(console, brokerConfig);
@@ -1130,22 +1138,26 @@ public static BrokerController buildBrokerController(String[] args) throws Excep
         System.exit(0);
     }
 
+    // 【17】正式记录配置信息到 broker 日志
     log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     MixAll.printObjectProperties(log, brokerConfig);
     MixAll.printObjectProperties(log, nettyServerConfig);
     MixAll.printObjectProperties(log, nettyClientConfig);
     MixAll.printObjectProperties(log, messageStoreConfig);
 
+    // 【18】设置认证配置路径
     authConfig.setConfigName(brokerConfig.getBrokerName());
     authConfig.setClusterName(brokerConfig.getBrokerClusterName());
     authConfig.setAuthConfigPath(messageStoreConfig.getStorePathRootDir() + File.separator + "config");
 
+    // 【19】创建 BrokerController 实例
     final BrokerController controller = new BrokerController(
         brokerConfig, nettyServerConfig, nettyClientConfig, messageStoreConfig, authConfig);
 
-    // Remember all configs to prevent discard
+    // 【20】注册配置项到 Configuration，用于后续管理与回滚
     controller.getConfiguration().registerConfig(properties);
 
+    // 【21】返回构建完成的控制器对象
     return controller;
 }
 ```
@@ -1184,7 +1196,21 @@ public static BrokerController start(BrokerController controller) {
 - 启动成功则记录到日志中。
 - 启动失败则打印错误信息并终止程序。
 
+
+
 ##### 2.2.3.5 
+
+
+
+### 2.3 BrokerController
+
+#### 2.3.1 属性
+
+
+
+#### 2.3.2 方法
+
+
 
 
 
