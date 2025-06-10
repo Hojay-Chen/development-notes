@@ -8,7 +8,7 @@
 
 ### 1.1 概述
 
-**Java序列化**是指将Java对象转换成字节流，以便存储在文件中或在网络上传输
+**Java序列化**是指将Java对象转换成字节流，以便存储在文件中或在网络上传输。
 
 **Java反序列化**是指将字节流转换成Java对象。
 
@@ -582,7 +582,129 @@ public class ConstructorReferenceExample {
 
 
 
-# 三、Java并发编程
+# 三、Java的IO
+
+## 1. 概述
+
+在 Java 中，提供了一系列 API，可以供开发者来读写外部数据或文件。我们称这些 API 为 Java IO。IO 是 Java 中比较重要，且比较难的知识点，主要是因为随着 Java 的发展，目前有三种 IO 共存。分别是 BIO、NIO 和 AIO。
+
+| 对比维度           | **BIO**                                                 | **NIO**                                                      | **AIO**                                                      |
+| ------------------ | ------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| **I/O 模型**       | 同步阻塞（Blocking）                                    | 同步非阻塞（Non-blocking）                                   | 异步非阻塞（Asynchronous Non-blocking）                      |
+| **JDK 引入版本**   | JDK 1.0                                                 | JDK 1.4                                                      | JDK 1.7                                                      |
+| **是否阻塞**       | 是                                                      | 否                                                           | 否                                                           |
+| **是否异步**       | 否                                                      | 否（需自行调度）                                             | 是（系统完成后回调）                                         |
+| **传输方向**       | 面向连接，面向流（TCP）                                 | 面向块（block-oriented）、面向连接                           | 面向事件、支持高并发连接处理                                 |
+| **数据处理方式**   | 面向流（Stream）                                        | 面向缓冲区（Buffer）                                         | 面向事件（Event + Buffer）                                   |
+| **线程模型**       | 一连接一线程（线程池可优化）                            | 一线程多连接（多路复用）                                     | 注册回调 + 系统通知，少量线程                                |
+| **I/O 操作处理**   | 主线程阻塞处理                                          | 主线程轮询事件再处理                                         | 回调函数处理                                                 |
+| **面向协议**       | TCP（流协议）为主                                       | TCP（主），UDP（DatagramChannel）也支持                      | TCP（目前主流实现），UDP 不常用                              |
+| **核心 API**       | `Socket`, `ServerSocket`, `InputStream`, `OutputStream` | `SocketChannel`, `ServerSocketChannel`, `Selector`, `ByteBuffer` | `AsynchronousSocketChannel`, `AsynchronousServerSocketChannel`, `CompletionHandler` |
+| **底层机制依赖**   | Java 阻塞 I/O 封装                                      | 基于 Linux epoll / Windows Selector / kqueue                 | 基于操作系统原生异步 I/O（如 Windows IOCP、Linux AIO）       |
+| **系统支持依赖性** | 全平台都支持                                            | 全平台都支持                                                 | 操作系统是否支持异步 I/O 特性决定效率（部分系统实现有限）    |
+| **资源消耗**       | 高（线程多）                                            | 中（线程少）                                                 | 低（系统通知 + 回调）                                        |
+| **可扩展性**       | 差                                                      | 好                                                           | 很好                                                         |
+| **开发难度**       | 简单，易上手                                            | 中等，涉及 Selector、Buffer 管理                             | 较高，涉及异步回调逻辑                                       |
+| **编程模型**       | 阻塞、串行                                              | 事件轮询 + 通道                                              | 回调函数（基于事件驱动）                                     |
+| **是否支持 UDP**   | 否                                                      | 是（DatagramChannel）                                        | 理论可支持，Java API 中不常见                                |
+| **典型应用**       | 控制台程序、小服务端、练手项目                          | Netty、Tomcat NIO 模式、聊天室服务器                         | 高性能异步服务（如 Netty AIO 模式、文件服务器）              |
+| **代表框架支持**   | Tomcat BIO、传统 Socket 编程                            | Netty、Tomcat NIO、Spring WebFlux、Akka                      | Netty（部分场景支持）、Spring Boot 2 + WebFlux、异步 RPC 系统 |
+| **适用场景**       | 并发连接少，逻辑简单场景                                | 高并发网络服务，连接量大但 I/O 量中等                        | 非常高并发、I/O密集型、高响应要求的场景（如游戏、音视频）    |
+
+
+
+## 2. BIO
+
+### 2.1 概述
+
+IO，即in和out，也就是输入和输出，指应用程序和外部设备之间的数据传递，常见的外部设备包括文件、管道、网络连接。Java 中是通过流处理IO 的。
+
+> ### 流介绍
+>
+> 流（Stream），是一个抽象的概念，是指一连串的数据（字符或字节），是以先进先出的方式发送信息的通道。
+>
+> 当程序需要读取数据的时候，就会开启一个通向数据源的流，这个数据源可以是文件，内存，或是网络连接。类似的，当程序需要写入数据的时候，就会开启一个通向目的地的流。这时候你就可以想象数据好像在这其中“流”动一样。
+>
+> 一般来说关于流的特性有下面几点：
+>
+> - 先进先出：最先写入输出流的数据最先被输入流读取到。
+> - 顺序存取：可以一个接一个地往流中写入一串字节，读出时也将按写入顺序读取一串字节，不能随机访问中间的数据。（RandomAccessFile除外）
+> - 只读或只写：每个流只能是输入流或输出流的一种，不能同时具备两个功能，输入流只能进行读操作，对输出流只能进行写操作。在一个数据传输通道中，如果既要写入数据，又要读取数据，则要分别提供两个流。
+
+Java的BIO体系架构如下图所示：
+
+![IO_cnajssas](E:\各种资料\Java开发笔记\我的笔记\images\IO_cnajssas.png)
+
+### 2.2 File类
+
+#### 2.2.1 概述
+
+- java.io.File类是文件和文件目录路径的抽象表示形式，与平台无关。
+- File 能新建、删除、重命名文件和目录，但 File 不能访问文件内容本身。如果需要访问文件内容本身，则需要使用输入/输出流。
+- 想要在Java程序中表示一个真实存在的文件或目录，那么必须有一个File对象，但是Java程序中的一个File对象，可能没有一个真实存在的文件或目录。
+- File对象可以作为参数传递给流的构造器。
+
+#### 2.2.2 构造
+
+- ```java
+  public File(String pathname)
+  ```
+
+  以pathname为路径创建File对象，可以是绝对路径或者相对路径，如果pathname是相对路径，则默认的当前路径在系统属性user.dir中存储。
+
+  - 绝对路径：是一个固定的路径,从盘符开始
+  - 相对路径：是相对于某个位置开始
+
+- ```java
+  public File(String parent,String child)
+  ```
+
+  以parent为父路径，child为子路径创建File对象。
+
+- ```java
+  public File(File parent,String child)
+  ```
+
+  根据一个父File对象和子文件路径创建File对象
+
+> ### 路径分隔
+>
+> 路径中的每级目录之间用一个**路径分隔符**隔开。路径分隔符和系统有关：
+>
+> - windows和DOS系统默认使用“\”来表示
+> - UNIX和URL使用“/”来表示
+>
+> 为了解决这个隐患，File类提供了一个常量：
+>
+> public static final String separator。根据操作系统，动态的提供分隔符。
+>
+> 举例：
+>
+> File file1 = new File("d:\\atguigu\\info.txt");
+>
+> File file2 = new File("d:" + File.separator + "atguigu" + File.separator + "info.txt");
+>
+> File file3 = new File("d:/atguigu");
+
+#### 2.2.3 常用方法
+
+
+
+
+
+## 3. NIO
+
+
+
+
+
+## 4. AIO
+
+
+
+
+
+# 四、Java并发编程
 
 ## 1. 线程运行状态
 
@@ -995,6 +1117,182 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 ## 4.线程池
+
+### 4.1 Executor框架介绍
+
+`Executor` 框架是 Java 在 **JDK 1.5** 引入的并发框架的一部分，旨在**简化多线程编程、统一任务提交与执行机制、实现线程池复用和资源控制**，此外，还能有效避免this逃逸出现。。它是 `java.util.concurrent` 包中的核心模块之一，也是实现高性能并发程序的重要基础。
+
+> ### this逃逸介绍
+>
+> 所谓 **this 逃逸**，就是这个“还没做完的对象”**被别人提前拿走了用**。比如说你刚创建了一个对象，还在构造函数里初始化各种属性；但你在初始化一半的时候，把这个对象注册给了某个“监听器”（比如：广播站）；那个监听器说：“好的，我拿到了你的 this”，就开始调用你对象里的方法！结果你都还没准备好（对象还没构造完），人家就开始调用你了，可能出错，可能得到的是不完整的结果。
+
+如下是整个Executor框架的结构图，此外，还有个Executors类作为工具类来辅助使用这套框架：
+
+![threadpool_ionvca](E:\各种资料\Java开发笔记\我的笔记\images\threadpool_ionvca.png)
+
+#### 4.1.1 Executor
+
+```java
+public interface Executor {
+    void execute(Runnable command);
+}
+```
+
+- 最基础的接口，定义了 **任务提交的入口：`execute()` 方法**。
+- 实现类会决定如何运行这个 `Runnable`。
+- 不关心是新开线程、复用线程，还是延迟执行。
+
+
+
+#### 4.1.2 ExecutorService
+
+```java
+public interface ExecutorService extends Executor {
+    void shutdown();
+    List<Runnable> shutdownNow();
+    Future<?> submit(Runnable task);
+    ...
+}
+```
+
+- 是 **真正的线程池接口**，添加了：
+  - **提交任务（submit）**
+  - **关闭线程池（shutdown）**
+  - **获取任务结果（Future）**
+
+
+
+#### 4.1.3 ScheduledExecutorService
+
+（定时任务支持）
+
+```java
+public interface ScheduledExecutorService extends ExecutorService {
+    ScheduledFuture<?> schedule(...);
+    ScheduledFuture<?> scheduleAtFixedRate(...);
+}
+```
+
+- 增加了定时调度能力：可实现延时任务、周期任务。
+
+
+
+#### 4.1.4 AbstractExecutorService
+
+（骨架实现类）
+
+```java
+public abstract class AbstractExecutorService implements ExecutorService {
+    // 实现了 submit 方法，但不关心线程池细节
+}
+```
+
+- 抽象类，提供了一些公共方法的实现。
+- 减少子类实现负担，例如将 `Runnable` 包装成 `FutureTask`。
+
+
+
+#### 4.1.5 ThreadPoolExecutor
+
+（最核心的线程池实现）
+
+```java
+public class ThreadPoolExecutor extends AbstractExecutorService
+```
+
+- 支持核心线程数、最大线程数、任务队列、拒绝策略等。
+- 通过 `Executors.newFixedThreadPool()`、`newCachedThreadPool()` 底层都是它。
+
+适合：大多数常规异步任务。
+
+
+
+#### 4.1.6 ScheduledThreadPoolExecutor
+
+（支持定时/周期任务）
+
+```java
+public class ScheduledThreadPoolExecutor extends ThreadPoolExecutor
+    implements ScheduledExecutorService
+```
+
+- 支持延迟执行、周期执行。
+- 通过 `Executors.newScheduledThreadPool()` 创建。
+- 同时支持线程池功能和调度功能。
+
+适合：心跳检测、日志轮询、定时任务等。
+
+
+
+#### 4.1.7 ForkJoinPool
+
+（任务分而治之）
+
+```java
+public class ForkJoinPool extends AbstractExecutorService
+```
+
+- 支持 **分治并行计算**，适合大任务切小任务并发处理。
+- 使用的是“工作窃取”算法，适合 CPU 密集型任务。
+- `Java 8` 中 `parallelStream()` 的底层线程池。
+
+适合：图像处理、大规模数据处理等递归任务。
+
+
+
+
+#### 4.1.8 ListeningExecutorService
+
+（来自 Guava 扩展）
+
+```java
+public interface ListeningExecutorService extends ExecutorService {
+    ListenableFuture<?> submit(...);
+}
+```
+
+- 这是 Google Guava 提供的扩展接口，不是 JDK 自带。
+- 可以监听任务完成（而非主动 get）——更方便响应异步结果。
+
+
+
+
+### 4.2 ThreadPoolExecutor介绍
+
+```java
+public ThreadPoolExecutor(int corePoolSize,
+                          int maximumPoolSize,
+                          long keepAliveTime,
+                          TimeUnit unit,
+                          BlockingQueue<Runnable> workQueue,
+                          ThreadFactory threadFactory,
+                          RejectedExecutionHandler handler) {
+    if (corePoolSize < 0 ||
+        maximumPoolSize <= 0 ||
+        maximumPoolSize < corePoolSize ||
+        keepAliveTime < 0)
+        throw new IllegalArgumentException();
+    if (workQueue == null || threadFactory == null || handler == null)
+        throw new NullPointerException();
+    this.acc = System.getSecurityManager() == null ?
+            null :
+            AccessController.getContext();
+    this.corePoolSize = corePoolSize;
+    this.maximumPoolSize = maximumPoolSize;
+    this.workQueue = workQueue;
+    this.keepAliveTime = unit.toNanos(keepAliveTime);
+    this.threadFactory = threadFactory;
+    this.handler = handler;
+}
+```
+
+- corePoolSize：线程池中用来工作的核心线程数量。
+- maximumPoolSize：最大线程数，线程池允许创建的最大线程数。
+- keepAliveTime：超出 corePoolSize 后创建的线程存活时间或者是所有线程最大存活时间，取决于配置。
+- unit：keepAliveTime 的时间单位。
+- workQueue：任务队列，是一个阻塞队列，当线程数达到核心线程数后，会将任务存储在阻塞队列中。
+- threadFactory ：线程池内部创建线程所用的工厂。
+- handler：拒绝策略；当队列已满并且线程数量达到最大线程数量时，会调用该方法处理任务。
 
 
 
@@ -1804,10 +2102,10 @@ private transient volatile Node tail;
 ```java
 static final class Node {
     // 节点状态标识
-    static final int CANCELLED =  1; // 取消
-    static final int SIGNAL    = -1; // 前驱节点释放锁时需唤醒该节点
-    static final int CONDITION = -2; // 等待在Condition上
-    static final int PROPAGATE = -3; // 共享模式下的传播状态
+    static final int CANCELLED =  1;
+    static final int SIGNAL    = -1;
+    static final int CONDITION = -2;
+    static final int PROPAGATE = -3;
 
     volatile int waitStatus;
     volatile Node prev;   // 前驱节点
@@ -1822,13 +2120,13 @@ static final class Node {
 
 - `waitStatus`：标记当前节点的状态，如是否需要被唤醒或已取消等。
 
-  | 枚举      | 含义                                           |
-  | :-------- | :--------------------------------------------- |
-  | 0         | 当一个Node被初始化的时候的默认值               |
-  | CANCELLED | 为1，表示线程获取锁的请求已经取消了            |
-  | CONDITION | 为-2，表示节点在等待队列中，节点线程等待唤醒   |
-  | PROPAGATE | 为-3，当前线程处在SHARED情况下，该字段才会使用 |
-  | SIGNAL    | 为-1，表示线程已经准备好了，就等资源释放了     |
+  | 枚举      | 含义                                                         |
+  | :-------- | :----------------------------------------------------------- |
+  | 0         | 当一个Node被初始化的时候的默认值。                           |
+  | CANCELLED | 为1，表示节点因为超时或中断被取消，不再参与竞争。            |
+  | SIGNAL    | 为-1，表示后继节点处于等待状态，当前节点在释放锁后需要通知它。 |
+  | CONDITION | 为-2，表示当前节点在条件队列中，等待被 `signal()` 唤醒。     |
+  | PROPAGATE | 为-3，表示共享模式下的传播行为，用于 `CountDownLatch` 等。   |
 
 - `prev` / `next`：双向链表，用于维护阻塞队列。
 
@@ -1849,13 +2147,9 @@ static final class Node {
 
 ![AQS_onvoab](E:\各种资料\Java开发笔记\我的笔记\images\AQS_onvoab.png)
 
-当一个线程尝试获取独占锁（如 ReentrantLock）时，流程如下：
-
-1. **尝试获取锁**：调用 `tryAcquire()` 尝试直接获取锁（该方法由实现类实现），若成功则直接结束流程。
-2. **失败则排队**：如果失败，则创建一个 `Node` 并加入等待队列。
-3. **阻塞等待**：线程通过 `LockSupport.park()` 进入等待状态。
-4. **唤醒尝试获取**：前驱节点释放锁后，唤醒后继节点，该线程再次尝试获取锁。
-5. **获取成功**：一旦获取到锁，线程从队列中移除。
+> **疑惑：**
+>
+> 明明LockSupport.park()方法不会清除interrupt flag标志位，为什么还要大费周章的去判断并清除中断标志位，然后等出循环再判断是否被中断过重新设置中断标志位，明明可以就无论park是被正常唤醒还是中断唤醒，都不管中断标志位，毕竟他会一直保留着，直到被出队列后的业务逻辑代码清除。
 
 
 
@@ -1871,6 +2165,14 @@ static final class Node {
 
 ![AQS_ocbnas](E:\各种资料\Java开发笔记\我的笔记\images\AQS_ocbnas.png)
 
+- unparkSuccessor(Node node)的compareAndSetWaitStatus这个CAS的目的是：**将当前节点的 `waitStatus` 从负数（`SIGNAL`）重置为 0，表示“我已经唤醒了后继节点，后面不用你再管了”**。但是即使 `CAS` 失败了（说明其他线程可能已经修改了 `waitStatus`，比如设置为 `CANCELLED`）：
+
+  - **不会影响后面的线程唤醒逻辑**；
+  - 也不会影响 AQS 队列结构或状态一致性；
+  - 唤醒操作依然可以顺利进行。
+
+  所以：**这一操作失败不重要，不值得为它付出性能代价重试**。
+
 
 
 **共享式锁**
@@ -1879,7 +2181,13 @@ static final class Node {
 
 
 
-##### 6.4.2.4 支持的同步模式
+
+
+
+
+#### 6.4.3 使用
+
+##### 6.4.3.4 支持的同步模式
 
 AQS 支持两种同步模式：
 
@@ -1887,12 +2195,6 @@ AQS 支持两种同步模式：
 - **共享模式（Shared）**：如 Semaphore 或 CountDownLatch，多个线程可同时获取资源。
 
 在共享模式下，唤醒线程时会传播给后续节点（节点的 `waitStatus` 为 `PROPAGATE`）。
-
-
-
-#### 6.4.3 使用
-
-
 
 #### 6.4.4 问题
 
@@ -2857,30 +3159,6 @@ public class ReentrantLock implements Lock, java.io.Serializable {
 
 这里不对 `AQS` 的源码内容占用过多篇章，可跳转AQS查看AQS相关方法及其实现细节：[跳转到AQS介绍](###6.4 AQS)。
 
-##### 7.4.2.5 公平与非公平模式
-
-- **非公平锁（默认）**：抢锁优先，性能高，但可能造成“线程饿死”。
-- **公平锁**：排队获取，线程调度更公平，但性能略低。
-
-构造方法区分：
-
-```java
-ReentrantLock lock1 = new ReentrantLock();        // 非公平锁
-ReentrantLock lock2 = new ReentrantLock(true);    // 公平锁
-```
-
-##### 7.4.2.6 Condition 支持
-
-相比 `synchronized` 只能使用 `Object.wait()/notify()`，`ReentrantLock` 通过 `newCondition()` 支持**多个条件等待队列**：
-
-```java
-Condition condition = lock.newCondition();
-condition.await();     // 等待
-condition.signal();    // 唤醒
-```
-
-这在生产者-消费者模型等需要更复杂线程通信时更灵活。
-
 
 
 ### 7.5 ReentrantReadWriteLock
@@ -2889,7 +3167,7 @@ condition.signal();    // 唤醒
 
 
 
-# 四、JVM
+# 五、JVM
 
 ## 1. JVM内存结构
 
@@ -3120,7 +3398,7 @@ HotSpot虚拟机的对象头分为两部分信息，第一部分用于存储对�
 
 
 
-# 五、Java重要类
+# 六、Java重要类
 
 ## 1. 并发
 

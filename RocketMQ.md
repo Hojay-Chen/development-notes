@@ -398,7 +398,7 @@ Apache RocketMQ 的消息模型具备如下特点：
 
 ### 5.1 定义
 
-消费者分组是 Apache RocketMQ 系统中承载多个消费行为一致的消费者的负载均衡分组。
+消费者分组是 Apache RocketMQ 系统中承载多个消费行为一致的消费者的**负载均衡分组**。
 
 和消费者不同，消费者分组并不是运行实体，而是一个逻辑资源。在 Apache RocketMQ 中，通过消费者分组内初始化多个消费者实现消费性能的水平扩展以及高可用容灾。
 
@@ -572,14 +572,18 @@ Brocker Server的功能模块示意图：
 ![rocketmq_ocnajsnc](E:\各种资料\Java开发笔记\我的笔记\images\rocketmq_ocnajsnc.png)
 
 - Remoting Module：整个Broker的实体，负责处理来自clients端的请求。而这个Broker实体则由以下模块构成。
-- Client Manager：客户端管理器。负责接收、解析客户端(Producer/Consumer)请求， 管理客户端。例如，维护Consumer的Topic订阅信息
+- Client Manager：客户端管理器。负责接收、解析客户端(Producer/Consumer)请求， 管理客户端。例如，维护Consumer的Topic订阅信息。
 - Store Service：存储服务。提供方便简单的API接口，处理消息存储到物理硬盘和消息查询功能。
 - HA Service：高可用服务。提供Master Broker和Slave Broker之间的数据同步功能。
 - Index Service：索引服务。根据特定的Message key，对投递到Broker的消息进行索引服务，同时也提供根据Message Key对消息进行快速宣询的功能。
 
 #### 1.3.3 集群部署
 
- 为了增强Broker性能与吞吐量，Broker一般都是以集群形式出现的。各集群节点中可能存放着相同Topic的不同Queue。不过，这里有个问题，如果某Broker节点宕机，如何保证数据不丢失呢？其解决方案是，将每个Broker集群节点进行横向扩展，即将Broker节点再建为一个HA集群，解决单点问题。
+ 为了增强Broker性能与吞吐量，Broker一般都是以集群形式出现的。各集群节点中可能存放着相同Topic的不同Queue。
+
+> 不过，这里有个问题，如果某Broker节点宕机，如何保证数据不丢失呢？
+>
+> 其解决方案是，将每个Broker集群节点进行横向扩展，即将Broker节点再建为一个HA集群，解决单点问题。
 
 Broker节点集群是一个主从集群，即集群中具有Master 与Slave两种角色。一个Master可以包含多个Slave，但一个Slave只能隶属于一个Master。Master与Slave的对应关系是通过指定相同的BrokerName、不同的Brokerld 来确定的。Brokerld为0表示Master，非0表示Slave。每个Broker与NameServer集群中的所有节点建立长连接，定时注册Topic信息到所有NameServer。
 
@@ -602,7 +606,7 @@ RocketMQ的思想来自于Kafka，而Kafka是依赖了Zookeeper的。所以，�
 
 #### 1.4.2 路由注册
 
-NameServer通常也是以集群的方式部署，不过，NameServer是无状态的，即NameServer集群中的各个节点间是无差异的，**各节点间相互不进行信息通讯**。那各节点中的数据是如何进行数据同步的呢？在Broker节点启动时，轮训NameServer列表， 与每个NameServer节点建立长连接，发起注册请求。在NameServer内部维护着一个Broker列表， 用来动态存储Broker的信息。
+NameServer通常也是以集群的方式部署，不过，NameServer是无状态的，即NameServer集群中的各个节点间是无差异的，**各节点间相互不进行信息通讯**。在Broker节点启动时，轮训配置的NameServer列表， 与每个NameServer节点建立长连接，发起注册请求。在NameServer内部维护着一个Broker列表， 用来动态存储Broker的信息。
 
 > NameServer与其他像zk、Eureka、Nacos等注册中心不同。
 >
@@ -632,17 +636,17 @@ RocketMQ的路由发现采用的是Pull模型。当Topic路由信息出现变化
 
 > 扩展：
 >
-> 1. Push模型：推送模型。实时性较好，是一个“订阅-发布”模型，需要维护一个长连接，而长连接的维护是需要资源成本的。该模型适合于的场景：
+> 1. Push模型：推送模型，服务器端发生变化，则将数据发送给客户端。实时性较好，是一个“订阅-发布”模型，但需要维护一个长连接，而长连接的维护是需要资源成本的。该模型适合于的场景：
 >    - **实时性要求较高**
 >    - Client数量不多，Server数据变化较频繁
-> 2. Pull模型：拉取模型。存在的问题是，实时性较差。
-> 3. Long Polling模型：长轮询模型。
+> 2. Pull模型：拉取模型，客户端固定时间间隔从服务器端获取新数据。存在的问题是，实时性较差。
+> 3. Long Polling模型：长轮询模型，客户端固定时间间隔向服务器端发送请求，服务器端保持连接，保持一段时间，该段时间内进行推送模型，时间段结束则断开连接，客户端继续等待固定时间间隔后再发起请求。
 
-#### 1.4.5 客户端NameServer选择策略
+#### 1.4.5 客户端选择NameServer策略
 
 > 这里的客户端指的是Producer和Consumer。
 
-客户端首先选择**随机策略**进行的选择，失败后采用的是**轮询策略**。
+客户端首先选择**随机策略**进行NameServer的选择，如果失败后采用的是**轮询策略**。
 
 **随机策略**
 
@@ -827,7 +831,7 @@ RocketMQ的路由发现采用的是Pull模型。当Topic路由信息出现变化
 
 
 
-## 2. Broker模块
+## 2. broker模块
 
 ### 2.1 整体结构
 
@@ -1191,6 +1195,8 @@ public static BrokerController start(BrokerController controller) {
 }
 ```
 
+[ [跳转BrokerController的start()方法](#####2.3.2.1 start()) ]
+
 功能：通过调用BrokerController对象的start方法来启动Broker：
 
 - 启动成功则记录到日志中。
@@ -1210,11 +1216,116 @@ public static BrokerController start(BrokerController controller) {
 
 #### 2.3.2 方法
 
+##### 2.3.2.1 start()
+
+```java
+public void start() throws Exception {
+
+    // 【1】设置 Broker 可参与服务的最早时间（用于延迟注册 NameServer）
+    this.shouldStartTime = System.currentTimeMillis() + messageStoreConfig.getDisappearTimeAfterStart();
+
+    // 【2】判断当前是否为“从机模拟主机模式”，设置隔离标志位
+    if (messageStoreConfig.getTotalReplicas() > 1 && this.brokerConfig.isEnableSlaveActingMaster()) {
+        isIsolated = true;
+    }
+
+    // 【3】启动 Broker 外部通信模块（如向 NameServer 发送请求）
+    if (this.brokerOuterAPI != null) {
+        this.brokerOuterAPI.start();
+    }
+
+    // 【4】启动 Broker 的基础服务（如消息存储、消费者管理等）
+    startBasicService();
+
+    // 【5】若不隔离、且未启用 DLedger 和消息重复功能，则执行首次向 NameServer 注册
+    if (!isIsolated && !this.messageStoreConfig.isEnableDLegerCommitLog() && !this.messageStoreConfig.isDuplicationEnable()) {
+        changeSpecialServiceStatus(this.brokerConfig.getBrokerId() == MixAll.MASTER_ID);
+        this.registerBrokerAll(true, false, true);
+    }
+
+    // 【6】定时任务：周期性向 NameServer 注册 Broker 信息（10 秒后首次执行，之后每隔一定时间执行）
+    scheduledFutures.add(this.scheduledExecutorService.scheduleAtFixedRate(
+        new AbstractBrokerRunnable(this.getBrokerIdentity()) {
+            @Override
+            public void run0() {
+                try {
+                    // 注册时机尚未到
+                    if (System.currentTimeMillis() < shouldStartTime) {
+                        BrokerController.LOG.info("Register to namesrv after {}", shouldStartTime);
+                        return;
+                    }
+                    // 当前 Broker 被隔离，不进行注册
+                    if (isIsolated) {
+                        BrokerController.LOG.info("Skip register for broker is isolated");
+                        return;
+                    }
+                    // 正式向 NameServer 注册（可强制）
+                    BrokerController.this.registerBrokerAll(true, false, brokerConfig.isForceRegister());
+                } catch (Throwable e) {
+                    BrokerController.LOG.error("registerBrokerAll Exception", e);
+                }
+            }
+        },
+        1000 * 10, // 延迟 10 秒执行
+        Math.max(10000, Math.min(brokerConfig.getRegisterNameServerPeriod(), 60000)), // 注册周期
+        TimeUnit.MILLISECONDS
+    ));
+
+    // 【7】若开启 SlaveActingMaster 模式，需发送心跳 + 同步 Broker 成员信息
+    if (this.brokerConfig.isEnableSlaveActingMaster()) {
+        scheduleSendHeartbeat(); // 发送心跳
+
+        // 定期同步 Broker 成员组信息
+        scheduledFutures.add(this.syncBrokerMemberGroupExecutorService.scheduleAtFixedRate(
+            new AbstractBrokerRunnable(this.getBrokerIdentity()) {
+                @Override
+                public void run0() {
+                    try {
+                        BrokerController.this.syncBrokerMemberGroup();
+                    } catch (Throwable e) {
+                        BrokerController.LOG.error("sync BrokerMemberGroup error. ", e);
+                    }
+                }
+            },
+            1000, // 延迟 1 秒执行
+            this.brokerConfig.getSyncBrokerMemberGroupPeriod(), // 同步周期
+            TimeUnit.MILLISECONDS
+        ));
+    }
+
+    // 【8】若开启控制器模式，同样发送心跳（用于参与控制器选举或状态汇报）
+    if (this.brokerConfig.isEnableControllerMode()) {
+        scheduleSendHeartbeat();
+    }
+
+    // 【9】若配置跳过上线前检查，直接启动服务
+    if (brokerConfig.isSkipPreOnline()) {
+        startServiceWithoutCondition();
+    }
+
+    // 【10】定时任务：每 5 秒刷新一次元数据（10 秒后开始）
+    this.scheduledExecutorService.scheduleAtFixedRate(
+        new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    BrokerController.this.brokerOuterAPI.refreshMetadata();
+                } catch (Exception e) {
+                    LOG.error("ScheduledTask refresh metadata exception", e);
+                }
+            }
+        },
+        10, 5, // 延迟 10 秒执行，之后每 5 秒执行一次
+        TimeUnit.SECONDS
+    );
+}
+```
 
 
 
 
-## 3. Common模块
+
+## 3. common模块
 
 ### 3.1 整体结构
 
@@ -1604,4 +1715,6 @@ public static String dealFilePath(String aclFilePath)
 - 使用 `Path.normalize()` 来规范化路径格式（处理冗余的 `.`、`..` 等）。
 
 
+
+## 4. remoting模块
 

@@ -125,7 +125,16 @@ cat ~/.ssh/id_rsa.pub
 
 ### 2.3 给git服务器配置公钥
 
-登录gitee/github，在平台的设置界面找到SSH设置选项，将上一步查看得到的公钥添加进去。
+登录gitee/github/gitlab，在平台的设置界面找到SSH设置选项，将上一步查看得到的公钥添加进去。
+#### 2.3.1 gitee
+
+#### 2.3.2 github
+
+#### 2.3.3 gitlab
+- 打开gitlab，找到Profile Settings ---> SSH Keys ---> Add SSH Key。
+- 把上一步中复制的内容粘贴到Key所对应的文本框，在Title对应的文本框中给这个sshkey设置一个名字，点击Add key按钮
+
+![gitlab_config_cvknsdauj](E:\各种资料\Java开发笔记\我的笔记\images\gitlab_config_cvknsdauj.png)
 
 
 
@@ -141,7 +150,7 @@ ssh -T git@gitee.com
 
 ```
 Warning: Permanently added 'gitee.com' (ED25519) to the list of known hosts.
-Hi 陈浩杰(@Haojie_Chen)! You've successfully authenticated, but GITEE.COM does not provide shell access.
+Hi ******* You've successfully authenticated, but GITEE.COM does not provide shell access.
 ```
 
 #### 2.4.2 连接github
@@ -220,6 +229,17 @@ Hi Hojay-Chen! You've successfully authenticated, but GitHub does not provide sh
 >
 > 输出结果应该是之前设置的新位置的完整路径。此时，可以使用Git bash生成新的SSH密钥对，并将其存储在新的.ssh位置。这样，Git操作将自动使用新的.ssh文件夹。
 
+#### 2.4.3 连接gitlab
+```
+ssh -T git@github.com
+```
+
+连接成功会出现类似如下信息：
+
+```
+Warning: Permanently added 'github.com' (ED25519) to the list of known hosts.
+Hi Hojay-Chen! You've successfully authenticated, but GitHub does not provide shell access.
+```
 
 
 # 四、IDEA配置Git环境
@@ -673,13 +693,6 @@ git branch -u origin/main
 
 
 
+# 七、原理
 
-
-
-
-
-
-
-
-
-
+## 1. 
