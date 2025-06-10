@@ -242,6 +242,7 @@ Hi Hojay-Chen! You've successfully authenticated, but GitHub does not provide sh
 ```
 
 
+
 # 四、IDEA配置Git环境
 
 ## 1. 创建仓库
@@ -695,4 +696,318 @@ git branch -u origin/main
 
 # 七、原理
 
-## 1. 
+## 1. Git 的三大工作区域
+
+### 1.1 工作目录（Working Directory）
+
+#### 1.1.1 概述
+
+本地项目文件夹（你直接编辑文件的地方）。
+
+#### 1.1.2 作用
+
+开发者的“沙盒”，所有修改从这里开始。
+
+#### 1.1.3 特性
+
+- 文件状态分为：
+  - `Untracked`
+  - `Modified`（已修改，Git 已跟踪但未暂存）。
+  - `Unmodified`（未修改，与最新提交一致）。
+- **高风险区**：此处的改动可能被覆盖（如 `git checkout -- file`）。
+
+#### 1.1.4 控制
+
+- （未跟踪，新增文件）。
+
+### 1.2 暂存区（Staging Area / Index）
+
+#### 1.2.1 概述
+
+位于 `.git/index` 的二进制文件，记录下一次提交的快照。
+
+#### 1.2.2 作用
+
+**精确控制提交内容**（如只提交部分文件或部分改动）。
+
+#### 1.2.3 特性
+
+- 通过 `git add` 将工作目录的变更添加到暂存区。
+- 支持选择性提交（例如修复多个 Bug 但分次提交）。
+- **安全区**：暂存的内容不会被意外丢弃。
+
+#### 1.2.4 控制
+
+
+
+### 1.3 本地仓库（Local Repository）
+
+#### 1.3.1 概述
+
+存储在 `.git/objects` 中的版本数据库。
+
+#### 1.3.2 作用
+
+永久保存提交历史，形成可追溯的快照链。
+
+#### 1.3.3 特性
+
+- 通过 `git commit` 将暂存区内容生成 Commit 对象。
+- 提交后生成四种对象：
+  - `Blob`（文件内容）、`Tree`（目录结构）。
+  - `Commit`（提交元数据）、`Tag`（可选标签）。
+
+
+
+## 2. Git 的标准工作流程
+
+### 2.1 工作流程介绍
+
+#### 2.1.1 修改代码（工作目录）
+
+```
+echo "New content" > file.txt  # 修改或创建文件
+```
+
+- 文件状态变为 `Modified` 或 `Untracked`。
+
+#### 2.1.2 暂存变更（工作目录 → 暂存区）
+
+```
+git add file.txt    # 暂存单个文件
+git add .           # 暂存所有修改
+```
+
+- 文件状态变为 `Staged`。
+
+#### 2.1.3 提交到本地仓库（暂存区 → 本地仓库）
+
+```
+git commit -m "Update file.txt"
+```
+
+- 生成 Commit 对象，分支指针（如 `main`）指向新提交。
+
+#### 2.1.4 推送到远程仓库（可选，本地仓库 → 远程仓库）
+
+```
+git push origin main
+```
+
+- 将本地提交同步到远程（如 GitHub/Gitee）。
+
+### 2.2 区域间的状态转换
+
+| **操作**         | **影响区域**          | **命令示例**               |
+| :--------------- | :-------------------- | :------------------------- |
+| 修改文件         | 工作目录 → `Modified` | `vim file.txt`             |
+| 暂存文件         | 工作目录 → 暂存区     | `git add file.txt`         |
+| 提交             | 暂存区 → 本地仓库     | `git commit -m "msg"`      |
+| 推送             | 本地仓库 → 远程仓库   | `git push origin main`     |
+| 撤销工作目录修改 | 丢弃未暂存的改动      | `git checkout -- file.txt` |
+| 撤销暂存区修改   | 移回工作目录          | `git reset HEAD file.txt`  |
+
+
+
+## 1. git信息存储
+
+### 1.1 Blob 对象（Binary Large Object）
+
+**作用**
+
+存储文件的内容（文本或二进制数据），但不包含文件名、路径等元信息。
+
+**特点**
+
+- **内容寻址**：以文件内容的 SHA-1 哈希值命名（如 `e69de29bb2d1d6434b8b29ae775ad8c2e48c5391`）。
+- **去重**：相同内容的文件只会存储一个 Blob，即使文件名不同。
+- **无结构**：仅存储原始数据，无任何附加信息。
+
+**生成方式**
+
+```
+echo "Hello Git" | git hash-object --stdin  
+# 输出 SHA-1 哈希值（如 8ab686eafeb1f44702738c8b0f24f2567c36da6d）
+```
+
+**存储路径**
+
+`.git/objects/8a/b686eafeb1f44702738c8b0f24f2567c36da6d`
+（前两位为子目录名，剩余部分为文件名）
+
+**查看内容**
+
+```
+git cat-file -p 8ab686e  # 输出 "Hello Git"
+```
+
+**查看类别**
+
+```
+git cat-file -t 8ab686e  # 输出 "Hello Git"
+```
+
+### 1.2 Tree 对象
+
+**作用**
+
+记录目录结构，将文件名、权限与 Blob 或子目录（其他 Tree）关联起来，类似文件系统的目录。
+
+**结构示例**
+
+一个 Tree 对象可能包含以下条目：
+
+```
+100644 blob e69de29    README.md  
+040000 tree 1a0b36a    src  
+100755 blob 3c4e9cd    script.sh
+```
+
+字段解释：
+
+- `100644`：文件权限（普通文件、可执行文件等）。
+- `blob/tree`：指向的对象类型。
+- `SHA-1`：对应 Blob 或 Tree 的哈希值。
+- 文件名（如 `README.md`）。
+
+**生成方式**
+
+1. 通过 `git add` 将文件加入暂存区（Index），此时 Git 会生成 Blob 并更新 Tree。
+2. 提交时，Git 根据暂存区生成根 Tree 对象。
+
+**查看命令**
+
+```
+git ls-tree HEAD          # 查看当前提交的根 Tree  
+git ls-tree <commit-hash> # 查看指定提交的 Tree
+```
+
+### 1.3 **Commit 对象**
+
+**作用**
+
+记录一次提交的元信息，并指向一个根 Tree（项目快照）和父提交（形成历史链）。
+
+**结构示例**
+
+```
+tree 1a0b36a...  
+parent d3b8c7f...  
+author Alice <alice@example.com> 1620000000 +0800  
+committer Bob <bob@example.com> 1620000000 +0800  
+
+Initial commit message...
+```
+
+字段解释：
+
+- `tree`：当前项目的根 Tree 对象哈希。
+- `parent`：父提交的哈希（首次提交无此字段，合并提交可能有多个父提交）。
+- `author` 和 `committer`：作者与提交者信息（可能不同）。
+- 提交信息（Commit Message）。
+
+**生成方式**
+
+通过 `git commit` 生成，步骤如下：
+
+1. 根据暂存区生成根 Tree 对象。
+2. 创建 Commit 对象，关联 Tree 和父提交。
+3. 更新当前分支引用（如 `refs/heads/main`）指向新 Commit。
+
+**查看命令**
+
+```
+git cat-file -p <commit-hash>  # 查看 Commit 对象内容  
+git show --pretty=raw <commit> # 显示完整提交信息
+```
+
+### 1.4 **Tag 对象（可选）**
+
+**作用**
+
+为特定提交提供一个永久、可读的引用（如版本号 `v1.0.0`），通常用于发布标记。
+
+**类型**
+
+1. **轻量标签（Lightweight Tag）**
+
+   - 直接指向某个 Commit 的引用（存储在 `.git/refs/tags/`），不生成独立对象。
+
+   ```
+   git tag v1.0-lightweight <commit-hash>
+   ```
+
+2. **附注标签（Annotated Tag）**
+
+   - 生成独立的 Tag 对象，包含标签作者、日期、注释等信息。
+
+   ```
+   git tag -a v1.0 -m "Release version 1.0"
+   ```
+
+**Tag 对象结构**
+
+```
+object 1a0b36a...  # 指向的 Commit 哈希  
+type commit  
+tag v1.0  
+tagger Alice <alice@example.com> 1620000000 +0800  
+
+Release version 1.0
+```
+
+**查看命令**
+
+```
+git cat-file -p v1.0      # 查看 Tag 对象内容  
+git show v1.0            # 显示标签及关联的提交
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
