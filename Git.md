@@ -425,9 +425,93 @@ git clone <url>
 
 # 六、使用
 
-## 1. 分支管理
+# 1. 创建仓库
 
-### 1.1 查看本地分支
+## 1.1 git init
+
+在执行完成 **git init** 命令后，Git 仓库会生成一个 .git 目录，该目录包含了资源的所有元数据，其他的项目目录保持不变。
+
+**使用方法**
+
+进入你想要创建仓库的目录，或者先创建一个新的目录：
+
+```
+mkdir my-project
+cd my-project
+```
+
+使用当前目录作为 Git 仓库，我们只需使它初始化。
+
+```
+git init
+```
+
+该命令执行完后会在当前目录生成一个 .git 目录。
+
+使用我们指定目录作为Git仓库。
+
+```
+git init newrepo
+```
+
+初始化后，会在 newrepo 目录下会出现一个名为 .git 的目录，所有 Git 需要的数据和资源都存放在这个目录中。
+
+如果当前目录下有几个文件想要纳入版本控制，需要先用 git add 命令告诉 Git 开始对这些文件进行跟踪，然后提交：
+
+```
+$ git add *.c
+$ git add README
+$ git commit -m '初始化项目版本'
+```
+
+以上命令将目录下以 .c 结尾及 README 文件提交到仓库中。
+
+> **注：** 在 Linux 系统中，commit 信息使用单引号 **'**，Windows 系统，commit 信息使用双引号 **"**。
+>
+> 所以在 git bash 中 **git commit -m '提交说明'** 这样是可以的，在 Windows 命令行中就要使用双引号 **git commit -m "提交说明"**。
+
+
+
+## 1.2 git clone
+
+我们使用 **git clone** 从现有 Git 仓库中拷贝项目（类似 **svn checkout**）。
+
+克隆仓库的命令格式为：
+
+```
+git clone <repo>
+```
+
+如果我们需要克隆到指定的目录，可以使用以下命令格式：
+
+```
+git clone <repo> <directory>
+```
+
+**参数说明：**
+
+- **repo:**Git 仓库。
+- **directory:**本地目录。
+
+比如，要克隆 Ruby 语言的 Git 代码仓库 Grit，可以用下面的命令：
+
+```
+$ git clone git://github.com/schacon/grit.git
+```
+
+执行该命令后，会在当前目录下创建一个名为grit的目录，其中包含一个 .git 的目录，用于保存下载下来的所有版本记录。
+
+如果要自己定义要新建的项目目录名称，可以在上面的命令末尾指定新的名字：
+
+```
+$ git clone git://github.com/schacon/grit.git mygrit
+```
+
+
+
+## 2. 分支管理
+
+### 2.1 查看本地分支
 
 查看当前仓库的所有本地分支：
 
@@ -448,7 +532,7 @@ git branch
 
 
 
-### 1.2 创建新分支
+### 2.2 创建新分支
 
 创建一个新的本地分支：
 
@@ -476,7 +560,7 @@ git checkout -b feature/new-feature
 
 
 
-### 1.3 切换分支
+### 2.3 切换分支
 
 切换到已存在的分支：
 
@@ -492,7 +576,7 @@ git checkout develop
 
 
 
-### 1.4 删除本地分支
+### 2.4 删除本地分支
 
 删除本地分支：
 
@@ -514,7 +598,7 @@ git branch -d feature/new-feature
 
   
 
-### 1.5 重命名本地分支
+### 2.5 重命名本地分支
 
 重命名当前分支：
 
@@ -542,7 +626,7 @@ git branch -m feature/old-feature feature/new-feature
 
 
 
-### 1.6 查看分支状态
+### 2.6 查看分支状态
 
 查看当前分支的状态：
 
@@ -561,7 +645,7 @@ nothing to commit, working tree clean
 
 
 
-### 1.7 查看分支提交历史
+### 2.7 查看分支提交历史
 
 查看当前分支的提交历史：
 
@@ -577,7 +661,7 @@ git log <分支名称>
 
 
 
-### 1.8 合并分支
+### 2.8 合并分支
 
 将一个分支的更改合并到当前分支：
 
@@ -593,7 +677,7 @@ git merge feature/new-feature
 
 
 
-### 1.9 拉取远程分支
+### 2.9 拉取远程分支
 
 从远程仓库拉取最新的分支信息：
 
@@ -629,7 +713,7 @@ git checkout -b feature/new-feature origin/feature/new-feature
 
 
 
-### 1.10 推送本地分支
+### 2.10 推送本地分支
 
 将本地分支推送到远程仓库：
 
@@ -645,7 +729,7 @@ git push -u origin feature/new-feature
 
 
 
-### 1.11 查看分支差异
+### 2.11 查看分支差异
 
 查看当前分支与另一个分支的差异：
 
@@ -661,7 +745,7 @@ git diff main
 
 
 
-### 1.12 查看分支的上游分支
+### 2.12 查看分支的上游分支
 
 查看当前分支的上游分支：
 
@@ -678,7 +762,7 @@ git branch -vv
 
 
 
-### 1.13 设置分支的上游分支
+### 2.13 设置分支的上游分支
 
 设置当前分支的上游分支：
 
@@ -691,6 +775,131 @@ git branch -u origin/<远程分支名称>
 ```bash
 git branch -u origin/main
 ```
+
+
+
+## 3. 提交管理
+
+### 3.1 直接暂存
+
+提交单个文件到暂存区：
+
+```bash
+git add filename
+```
+
+提交全部文件到暂存区：
+
+```bash
+git add .
+```
+
+### 3.2 交互式暂存
+
+逐块选择要暂存的更改。
+
+```
+git add -p
+```
+
+执行此命令后，Git 会逐块显示文件的更改，你可以选择是否暂存每个块。常用选项包括：
+
+- `y`：暂存当前块
+- `n`：跳过当前块
+- `s`：拆分当前块
+- `e`：手动编辑当前块
+- `q`：退出暂存
+
+### 3.3 暂存区提交版本库
+
+将暂存区存储的更新内容提交到仓库中，形成commit
+
+```bash 
+git commit -m "commont"
+```
+
+### 3.4 撤销提交
+
+撤销最近n次commit，并保留工作区内容：
+
+```bash
+git reset --soft HEAD~n
+```
+
+撤销最近n次commit，并保留工作区内容：
+
+
+
+## 4. 配置管理
+
+### 4.1 编辑 git 配置文件
+
+针对当前仓库，编辑配置文件：
+
+```bash
+git config -e
+```
+
+针对系统上所有仓库，编辑配置文件：
+
+```bash
+git config -e --global
+```
+
+### 4.2 查看提交时的用户信息
+
+查看提交代码时的用户信息：
+
+```bash
+git config --list
+```
+
+得到类似如下的提交时用户信息：
+```bash
+diff.astextplain.textconv=astextplain
+filter.lfs.clean=git-lfs clean -- %f
+filter.lfs.smudge=git-lfs smudge -- %f
+filter.lfs.process=git-lfs filter-process
+filter.lfs.required=true
+http.sslbackend=schannel
+core.autocrlf=true
+core.fscache=true
+core.symlinks=false
+pull.rebase=false
+credential.helper=manager
+credential.https://dev.azure.com.usehttppath=true
+init.defaultbranch=master
+user.name=name
+user.email=email
+core.repositoryformatversion=0
+core.filemode=false
+core.bare=false
+core.logallrefupdates=true
+core.symlinks=false
+core.ignorecase=true
+remote.github.url=https://github.com/Hojay-Chen/development-notes.git
+```
+
+### 4.3 设置提交时的用户信息
+
+```bash
+git config <type> <value>
+```
+
+添加 **--global** 参数可以作用于本地全部仓库，否则只对当前仓库有效。
+
+例如：
+
+```bash
+git config --global user.name "runoob"
+git config --global user.email test@runoob.com
+```
+
+
+
+### 4.4 
+
+
 
 
 
@@ -719,6 +928,8 @@ git branch -u origin/main
 #### 1.1.4 控制
 
 - （未跟踪，新增文件）。
+
+
 
 ### 1.2 暂存区（Staging Area / Index）
 
@@ -794,7 +1005,7 @@ git commit -m "Update file.txt"
 git push origin main
 ```
 
-- 将本地提交同步到远程（如 GitHub/Gitee）。
+- 将本地提交同步到远程（如 GitHub/Gitee/Gitlab）。
 
 ### 2.2 区域间的状态转换
 
@@ -809,9 +1020,9 @@ git push origin main
 
 
 
-## 1. git信息存储
+## 3. git信息存储
 
-### 1.1 Blob 对象（Binary Large Object）
+### 3.1 Blob 对象（Binary Large Object）
 
 **作用**
 
@@ -847,7 +1058,9 @@ git cat-file -p 8ab686e  # 输出 "Hello Git"
 git cat-file -t 8ab686e  # 输出 "Hello Git"
 ```
 
-### 1.2 Tree 对象
+
+
+### 3.2 Tree 对象
 
 **作用**
 
@@ -882,7 +1095,9 @@ git ls-tree HEAD          # 查看当前提交的根 Tree
 git ls-tree <commit-hash> # 查看指定提交的 Tree
 ```
 
-### 1.3 **Commit 对象**
+
+
+### 3.3 **Commit 对象**
 
 **作用**
 
@@ -921,7 +1136,9 @@ git cat-file -p <commit-hash>  # 查看 Commit 对象内容
 git show --pretty=raw <commit> # 显示完整提交信息
 ```
 
-### 1.4 **Tag 对象（可选）**
+
+
+### 3.4 **Tag 对象（可选）**
 
 **作用**
 
