@@ -425,9 +425,9 @@ git clone <url>
 
 # 六、使用
 
-# 1. 创建仓库
+## 1. 创建仓库
 
-## 1.1 git init
+### 1.1 git init
 
 在执行完成 **git init** 命令后，Git 仓库会生成一个 .git 目录，该目录包含了资源的所有元数据，其他的项目目录保持不变。
 
@@ -472,7 +472,7 @@ $ git commit -m '初始化项目版本'
 
 
 
-## 1.2 git clone
+### 1.2 git clone
 
 我们使用 **git clone** 从现有 Git 仓库中拷贝项目（类似 **svn checkout**）。
 

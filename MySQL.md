@@ -3081,23 +3081,870 @@ MVCC 的实现依赖于：`隐藏字段`、`Undo Log`、`Read View`。
 
 
 
+# 四、MySQL应用篇
+
+## 1. 分布式锁实现
+
+### 1.1 基于锁表+ReentrantLock
+
+#### 1.1.1 原理
+
+![lock_iohufass](D:\notes\development-notes\images\lock_iohufass.png)
+
+#### 1.1.2 实现
+
+创建锁表
+
+```mysql
+CREATE TABLE `optimistic_lock` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `lock_key` varchar(128) NOT NULL COMMENT '锁标识',
+  `version` int(11) NOT NULL DEFAULT 0 COMMENT '版本号',
+  `owner` varchar(128) DEFAULT NULL COMMENT '锁持有者',
+  `expire_time` datetime DEFAULT NULL COMMENT '过期时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_lock_key` (`lock_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+Java代码进行乐观锁封装：
+
+```java
+import java.sql.*;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.concurrent.TimeUnit;
+
+public class OptimisticDistributedLock implements AutoCloseable {
+    private final Connection connection;
+    private final String lockKey;
+    private final String ownerId;
+    private int version = -1;
+    private boolean locked = false;
+
+    public OptimisticDistributedLock(Connection connection, String lockKey, String ownerId) {
+        this.connection = connection;
+        this.lockKey = lockKey;
+        this.ownerId = ownerId;
+    }
+
+    public boolean tryLock(long timeout, TimeUnit unit) throws SQLException {
+        LocalDateTime startTime = LocalDateTime.now();
+        Duration duration = Duration.ofMillis(unit.toMillis(timeout));
+
+        while (Duration.between(startTime, LocalDateTime.now()).compareTo(duration) < 0) {
+            if (acquireLock()) {
+                locked = true;
+                return true;
+            }
+            try {
+                Thread.sleep(100); // 等待100ms重试
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        return false;
+    }
+
+    private boolean acquireLock() throws SQLException {
+        try {
+            connection.setAutoCommit(false);
+
+            // 尝试插入新锁记录
+            try (PreparedStatement insertStmt = connection.prepareStatement(
+                    "INSERT INTO optimistic_lock (lock_key, version) VALUES (?, 0)")) {
+                insertStmt.setString(1, lockKey);
+                int affected = insertStmt.executeUpdate();
+                if (affected > 0) {
+                    this.version = 0;
+                    return true;
+                }
+            } catch (SQLException e) {
+                // 唯一键冲突，锁已存在
+            }
+
+            // 锁已存在，尝试更新
+            try (PreparedStatement stmt = connection.prepareStatement(
+                    "UPDATE optimistic_lock SET owner = ?, version = version + 1 " +
+                            "WHERE lock_key = ? AND (owner IS NULL OR expire_time < NOW() OR owner = ?) " +
+                            "AND version = ?")) {
+
+                stmt.setString(1, ownerId);
+                stmt.setString(2, lockKey);
+                stmt.setString(3, ownerId);
+                stmt.setInt(4, version);
+
+                int affected = stmt.executeUpdate();
+                if (affected > 0) {
+                    version++; // 本地维护版本号
+                    return true;
+                }
+
+                // 获取当前版本号用于下次重试
+                try (PreparedStatement queryStmt = connection.prepareStatement(
+                        "SELECT version FROM optimistic_lock WHERE lock_key = ?")) {
+                    queryStmt.setString(1, lockKey);
+                    ResultSet rs = queryStmt.executeQuery();
+                    if (rs.next()) {
+                        version = rs.getInt("version");
+                    }
+                }
+            }
+        } finally {
+            connection.commit();
+            connection.setAutoCommit(true);
+        }
+        return false;
+    }
+
+    public boolean unlock() throws SQLException {
+        if (!locked) return false;
+
+        try (PreparedStatement stmt = connection.prepareStatement(
+                "UPDATE optimistic_lock SET owner = NULL WHERE lock_key = ? AND owner = ?")) {
+            stmt.setString(1, lockKey);
+            stmt.setString(2, ownerId);
+            int affected = stmt.executeUpdate();
+            locked = false;
+            return affected > 0;
+        }
+    }
+
+    @Override
+    public void close() {
+        try {
+            unlock();
+        } catch (SQLException e) {
+            // 日志处理
+        }
+    }
+}
+```
 
 
 
+上面这种简单的实现有以下几个问题：
+
+1. 这把锁依赖数据库的可用性，数据库是一个单点，一旦数据库挂掉，会导致业务系统不可用。
+
+   答：那就搞两个数据库，数据库之前双向同步，一旦挂掉快速切换到备库上。
+
+2. 这把锁没有失效时间，一旦解决操作失败，就会导致记录一直在数据库中，其他线程无法在获得锁。
+
+   答：可以做一个定时任务，每隔一定时间把数据库中的超时数据清理一遍。
+
+3. 这把锁只能是非阻塞的，因为数据的insert操作，一旦插入失败就会直接报错。没有获得锁的线程并不会进入排队队列，要想再次获得锁就要再次触发获得锁的操作。
+
+   答：可以写一个while循环，直到insert成功再返回成功。
+
+4. 这把锁是非重入的，同一个线程在没有释放锁之前无法再次获得该锁。因为数据库表中数据已经存在了。
+
+   答：可以在数据库表中加一个字段，记录当前获得锁的机器的主机信息和线程信息，那么下次再获取锁的时候先查询数据库，如果当前机器的主机信息和线程信息在数据库中可以查到的话，就直接把锁分配给它即可。
 
 
 
+### 1.2 基于用户级锁+心跳检测+ReentrantLock
+
+#### 1.2.1 原理
+
+> # 用户级锁介绍
+>
+> 用户级锁（User-Level Lock）是 MySQL 提供的一种特殊锁机制，它不同于常规的表锁或行锁，而是专门为应用程序提供的协调工具。
+>
+> ## 一、概述
+>
+> 1. **由应用程序主动控制**的锁（不是数据库自动管理的）
+> 2. **通过字符串名称**来标识的锁（如 `"order_processing_lock"`）
+> 3. **跨连接可见**的全局锁（所有客户端都能检测到）
+> 4. **与事务无关**的锁（不会随事务提交而自动释放）
+>
+> 
+>
+> ## 二、用户级锁的核心特点
+>
+> 1. **命名自由**：
+>
+>    ```sql
+>    SELECT GET_LOCK('月度报表生成锁', 10);  -- 锁名可以任意定义
+>    ```
+>
+> 2. **跨事务性**：
+>
+>    ```sql
+>    START TRANSACTION;
+>    SELECT GET_LOCK('my_lock', 10);  -- 获取锁
+>    -- 这里执行操作...
+>    COMMIT;                         -- 事务提交后锁仍然存在！
+>    SELECT RELEASE_LOCK('my_lock');  -- 必须显式释放
+>    ```
+>
+> 3. **连接绑定**：
+>
+>    - 锁与MySQL连接绑定
+>    - 如果连接断开（正常或异常），锁会自动释放
+>
+> 4. 完全由开发者决定何时加锁、何时释放,与数据库自动管理的"系统级锁"（如表锁、行锁）区分开
+>
+> 
+>
+> ## 三、用户级锁 vs 系统级锁
+>
+> |   特性   |      用户级锁      | 系统级锁（表锁/行锁） |
+> | :------: | :----------------: | :-------------------: |
+> |  控制方  |      应用程序      |    数据库自动管理     |
+> |   标识   |     字符串名称     |      表名/行数据      |
+> |   范围   |   整个MySQL实例    |      特定表或行       |
+> | 释放时机 | 显式释放或连接断开 |   事务结束自动释放    |
+> |   用途   |    应用逻辑协调    |    保证数据一致性     |
+>
+> 
+>
+> ## 四、注意事项
+>
+> 1. **不是事务锁**：不会自动随事务提交而释放
+> 2. **谨慎选择锁名**：避免不同业务使用相同锁名
+> 3. **避免长时间持有**：可能导致其他进程长时间等待
+> 4. **连接池问题**：连接被放回连接池时不会自动释放锁
+> 5. **性能问题**：用户级锁是MySQL提供的一个简单但强大的工具，特别适合需要跨应用服务器协调的场景，但要注意合理使用以避免性能问题。
+
+![lock_consacjos](D:\notes\development-notes\images\lock_consacjos.png)
+
+#### 1.2.2 实现
+
+```java
+import java.sql.*;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Logger;
+
+public class UserHeartbeatDistributedLock implements AutoCloseable {
+    private static final Logger logger = Logger.getLogger(UserHeartbeatDistributedLock.class.getName());
+
+    private final String name;
+    private final String dsn;
+    private final long heartbeatIntervalMillis;
+    private Connection connection;
+    private int connectionId;
+
+    private final ReentrantLock internalLock = new ReentrantLock();
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledFuture<?> heartbeatTask;
+    private volatile boolean locked = false;
+
+    public UserHeartbeatDistributedLock(String dsn, String name, long heartbeatIntervalMillis) throws SQLException {
+        this.dsn = dsn;
+        this.name = name;
+        this.heartbeatIntervalMillis = heartbeatIntervalMillis;
+        connect();
+    }
+
+    private void connect() throws SQLException {
+        this.connection = DriverManager.getConnection(dsn);
+        this.connection.setAutoCommit(true);
+        try (PreparedStatement stmt = connection.prepareStatement("SELECT CONNECTION_ID()")) {
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                this.connectionId = rs.getInt(1);
+                logger.info("Connected, connectionId=" + connectionId);
+            } else {
+                throw new SQLException("Unable to fetch connection id");
+            }
+        }
+    }
+
+    public boolean lock(int timeoutSeconds) throws SQLException {
+        internalLock.lock();
+        try {
+            if (locked) return true;
+
+            try (PreparedStatement stmt = connection.prepareStatement("SELECT GET_LOCK(?, ?)")) {
+                stmt.setString(1, name);
+                stmt.setInt(2, timeoutSeconds);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next() && rs.getInt(1) == 1) {
+                    if (!isOwner()) throw new SQLException("Lock acquired, but not owner?");
+                    this.locked = true;
+                    startHeartbeat();
+                    logger.info("Lock acquired: " + name);
+                    return true;
+                }
+                return false;
+            }
+        } finally {
+            internalLock.unlock();
+        }
+    }
+
+    private void startHeartbeat() {
+        heartbeatTask = scheduler.scheduleAtFixedRate(() -> {
+            try {
+                if (!isOwner()) {
+                    logger.warning("Heartbeat: lost ownership of lock: " + name);
+                    reconnectAndReacquire();
+                }
+            } catch (SQLException e) {
+                logger.warning("Heartbeat SQL error: " + e.getMessage());
+            }
+        }, heartbeatIntervalMillis, heartbeatIntervalMillis, TimeUnit.MILLISECONDS);
+    }
+
+    private void reconnectAndReacquire() {
+        internalLock.lock();
+        try {
+            try {
+                if (connection != null && !connection.isClosed()) connection.close();
+            } catch (SQLException ignored) {}
+
+            connect(); // 重连
+
+            try (PreparedStatement stmt = connection.prepareStatement("SELECT GET_LOCK(?, 0)")) {
+                stmt.setString(1, name);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next() && rs.getInt(1) == 1) {
+                    logger.info("Reacquired lock after loss: " + name);
+                    this.locked = true;
+                } else {
+                    logger.severe("Failed to reacquire lock after loss: " + name);
+                    this.locked = false;
+                }
+            }
+        } catch (SQLException e) {
+            logger.severe("Reconnection or reacquire failed: " + e.getMessage());
+            this.locked = false;
+        } finally {
+            internalLock.unlock();
+        }
+    }
+
+    public boolean unlock() {
+        internalLock.lock();
+        try {
+            if (!locked) return false;
+
+            if (heartbeatTask != null) heartbeatTask.cancel(true);
+
+            try (PreparedStatement stmt = connection.prepareStatement("SELECT RELEASE_LOCK(?)")) {
+                stmt.setString(1, name);
+                ResultSet rs = stmt.executeQuery();
+                boolean result = rs.next() && rs.getInt(1) == 1;
+                this.locked = false;
+                logger.info("Lock released: " + name + ", result=" + result);
+                return result;
+            }
+        } catch (SQLException e) {
+            logger.warning("Unlock error: " + e.getMessage());
+            return false;
+        } finally {
+            internalLock.unlock();
+        }
+    }
+
+    public boolean isOwner() throws SQLException {
+        try (PreparedStatement stmt = connection.prepareStatement("SELECT IS_USED_LOCK(?)")) {
+            stmt.setString(1, name);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                int val = rs.getInt(1);
+                if (rs.wasNull()) return false;
+                return val == this.connectionId;
+            }
+            return false;
+        }
+    }
+
+    @Override
+    public void close() {
+        unlock();
+        scheduler.shutdown();
+        try {
+            if (!scheduler.awaitTermination(3, TimeUnit.SECONDS)) {
+                scheduler.shutdownNow();
+            }
+        } catch (InterruptedException ignored) {
+            scheduler.shutdownNow();
+        }
+
+        try {
+            if (connection != null && !connection.isClosed()) connection.close();
+        } catch (SQLException ignored) {}
+    }
+
+    public int getConnectionId() {
+        return connectionId;
+    }
+}
+```
 
 
 
+### 1.3 基于for update行锁
+
+#### 1.3.1 原理
+
+![lock_ionsajncsao](D:\notes\development-notes\images\lock_ionsajncsao.png)
+
+#### 1.3.2 实现
+
+数据库设计：
+
+```mysql
+CREATE TABLE `distributed_lock` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `lock_name` varchar(64) NOT NULL COMMENT '锁名称',
+  `owner` varchar(128) DEFAULT NULL COMMENT '持有者标识',
+  `expire_time` timestamp NULL DEFAULT NULL COMMENT '过期时间',
+  `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_lock_name` (`lock_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='分布式锁表';
+```
+
+Java实现：
+
+```java
+import javax.sql.DataSource;
+import java.sql.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.LockSupport;
+
+public class RowLockDistributedLock implements AutoCloseable {
+    private static final String DEFAULT_LOCK_TABLE = "distributed_lock";
+    private static final long DEFAULT_ACQUIRE_TIMEOUT = 3000; // 默认获取锁超时时间(ms)
+    private static final long DEFAULT_LOCK_TIMEOUT = 30000;   // 默认锁超时时间(ms)
+    private static final long RENEW_INTERVAL = 10000;         // 续约间隔(ms)
+
+    private final DataSource dataSource;
+    private final String lockName;
+    private final String lockTable;
+    private final long lockTimeout;
+
+    private Connection lockConnection;
+    private ScheduledExecutorService scheduler;
+    private ScheduledFuture<?> renewTask;
+    private final AtomicBoolean isLocked = new AtomicBoolean(false);
+    private final Thread lockHolderThread;
+
+    public RowLockDistributedLock(DataSource dataSource, String lockName) {
+        this(dataSource, lockName, DEFAULT_LOCK_TABLE, DEFAULT_LOCK_TIMEOUT);
+    }
+
+    public RowLockDistributedLock(DataSource dataSource, String lockName,
+                                String lockTable, long lockTimeout) {
+        this.dataSource = dataSource;
+        this.lockName = lockName;
+        this.lockTable = lockTable;
+        this.lockTimeout = lockTimeout;
+        this.lockHolderThread = Thread.currentThread();
+        this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "lock-renew-" + lockName);
+            t.setDaemon(true);
+            return t;
+        });
+    }
+
+    /**
+     * 尝试获取锁
+     * @param timeout 超时时间(毫秒)
+     * @return 是否获取成功
+     */
+    public boolean tryLock(long timeout) throws SQLException {
+        long endTime = System.currentTimeMillis() + timeout;
+
+        while (System.currentTimeMillis() < endTime) {
+            if (acquireLock()) {
+                isLocked.set(true);
+                startRenewTask();
+                return true;
+            }
+
+            // 短暂休眠后重试
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(50));
+        }
+        return false;
+    }
+
+    private boolean acquireLock() throws SQLException {
+        if (lockConnection != null && !lockConnection.isClosed()) {
+            return false;
+        }
+
+        Connection conn = dataSource.getConnection();
+        try {
+            conn.setAutoCommit(false);
+
+            // 设置事务超时（MySQL 5.7+支持）
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("SET SESSION innodb_lock_wait_timeout = " +
+                        TimeUnit.MILLISECONDS.toSeconds(lockTimeout));
+            }
+
+            // 尝试获取锁（无需预先插入记录）
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT 1 FROM " + lockTable +
+                            " WHERE lock_name = ? FOR UPDATE NOWAIT")) {
+                stmt.setString(1, lockName);
+                ResultSet rs = stmt.executeQuery();
+
+                if (rs.next()) {
+                    // 记录已存在，成功获取锁
+                    lockConnection = conn;
+                    return true;
+                }
+            }
+
+            // 记录不存在，尝试插入
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "INSERT INTO " + lockTable + " (lock_name, owner, expire_time) " +
+                            "VALUES (?, ?, ?)")) {
+                stmt.setString(1, lockName);
+                stmt.setString(2, Thread.currentThread().getName());
+                stmt.setTimestamp(3, new Timestamp(
+                        System.currentTimeMillis() + lockTimeout));
+
+                if (stmt.executeUpdate() > 0) {
+                    // 插入成功，再次确认获取锁
+                    try (PreparedStatement lockStmt = conn.prepareStatement(
+                            "SELECT 1 FROM " + lockTable +
+                                    " WHERE lock_name = ? FOR UPDATE")) {
+                        lockStmt.setString(1, lockName);
+                        lockStmt.executeQuery();
+
+                        lockConnection = conn;
+                        return true;
+                    }
+                }
+            }
+
+            conn.commit();
+        } catch (SQLException e) {
+            // 锁被占用或超时
+            if (isLockConflict(e)) {
+                closeQuietly(conn);
+                return false;
+            }
+            throw e;
+        } finally {
+            if (lockConnection == null) {
+                closeQuietly(conn);
+            }
+        }
+        return false;
+    }
+
+    private void startRenewTask() {
+        renewTask = scheduler.scheduleAtFixedRate(() -> {
+            try {
+                renewLock();
+            } catch (SQLException e) {
+                // 续约失败，释放锁
+                isLocked.set(false);
+                closeQuietly(lockConnection);
+            }
+        }, RENEW_INTERVAL, RENEW_INTERVAL, TimeUnit.MILLISECONDS);
+    }
+
+    private void renewLock() throws SQLException {
+        if (lockConnection == null || lockConnection.isClosed()) {
+            throw new SQLException("Lock connection is closed");
+        }
+
+        try (PreparedStatement stmt = lockConnection.prepareStatement(
+                "UPDATE " + lockTable + " SET expire_time = ? " +
+                        "WHERE lock_name = ?")) {
+            stmt.setTimestamp(1, new Timestamp(
+                    System.currentTimeMillis() + lockTimeout));
+            stmt.setString(2, lockName);
+
+            if (stmt.executeUpdate() == 0) {
+                throw new SQLException("Lock record not found");
+            }
+        }
+    }
+
+    /**
+     * 释放锁
+     */
+    public void unlock() {
+        if (!isLocked.compareAndSet(true, false)) {
+            return;
+        }
+
+        if (renewTask != null) {
+            renewTask.cancel(true);
+        }
+
+        if (lockConnection != null) {
+            try {
+                // 释放锁（通过提交事务）
+                if (!lockConnection.getAutoCommit()) {
+                    lockConnection.commit();
+                }
+
+                // 清理锁记录（可选）
+                try (PreparedStatement stmt = lockConnection.prepareStatement(
+                        "DELETE FROM " + lockTable + " WHERE lock_name = ?")) {
+                    stmt.setString(1, lockName);
+                    stmt.executeUpdate();
+                }
+            } catch (SQLException e) {
+                // 记录日志
+            } finally {
+                closeQuietly(lockConnection);
+                lockConnection = null;
+            }
+        }
+    }
+
+    @Override
+    public void close() {
+        unlock();
+        scheduler.shutdown();
+    }
+
+    private boolean isLockConflict(SQLException e) {
+        // MySQL锁冲突错误码
+        return e.getErrorCode() == 1205 ||  // Lock wait timeout
+                e.getErrorCode() == 1213 ||  // Deadlock found
+                (e.getMessage() != null &&
+                        e.getMessage().contains("Lock wait timeout"));
+    }
+
+    private void closeQuietly(Connection conn) {
+        try {
+            if (conn != null && !conn.isClosed()) {
+                conn.close();
+            }
+        } catch (SQLException ignored) {}
+    }
+}
+```
 
 
 
+### 1.4 基于轻量级锁服务
+
+#### 1.4.1 原理
+
+![lock_bkndosn](D:\notes\development-notes\images\lock_bkndosn.png)
 
 
 
+#### 1.4.2 实现
+
+数据库设计：
+
+```sql
+CREATE TABLE `global_lock_service` (
+  `lock_name` varchar(128) NOT NULL COMMENT '锁名称',
+  `lock_holder` varchar(128) NOT NULL COMMENT '锁持有者标识',
+  `expire_time` bigint(20) NOT NULL COMMENT '过期时间戳(毫秒)',
+  `token` varchar(64) NOT NULL COMMENT '随机令牌防误删',
+  `lock_count` int NOT NULL DEFAULT 0 COMMENT '重入次数计数器',
+  PRIMARY KEY (`lock_name`),
+  KEY `idx_expire_time` (`expire_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='分布式锁服务表';
+```
+
+Java封装实现：
+
+```java
+import java.sql.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+public class LightweightDistributedLock implements AutoCloseable {
+    private final Connection connection;
+    private final String lockName;
+    private final String clientId;
+    private final String token;
+    private volatile boolean isLocked = false;
+    private ScheduledExecutorService renewExecutor;
+    
+    // 线程本地重入计数器
+    private static final ThreadLocal<Map<String, Integer>> reentrantCounters = 
+        ThreadLocal.withInitial(HashMap::new);
+
+    public LightweightDistributedLock(Connection connection, String lockName, String clientId) {
+        this.connection = Objects.requireNonNull(connection);
+        this.lockName = Objects.requireNonNull(lockName);
+        this.clientId = Objects.requireNonNull(clientId);
+        this.token = UUID.randomUUID().toString();
+    }
+
+    public boolean tryLock(long leaseTime, TimeUnit unit) throws SQLException {
+        Map<String, Integer> counterMap = reentrantCounters.get();
+        
+        // 重入检查
+        if (counterMap.containsKey(lockName)) {
+            counterMap.put(lockName, counterMap.get(lockName) + 1);
+            return true;
+        }
+
+        long now = System.currentTimeMillis();
+        long expireTime = now + unit.toMillis(leaseTime);
+
+        try {
+            connection.setAutoCommit(false);
+
+            // 原子化获取锁
+            try (PreparedStatement stmt = connection.prepareStatement(
+                    "INSERT INTO global_lock_service (lock_name, lock_holder, expire_time, token, lock_count) " +
+                    "VALUES (?, ?, ?, ?, 1) " +
+                    "ON DUPLICATE KEY UPDATE " +
+                    "lock_holder = IF(expire_time < ? OR lock_holder = ?, VALUES(lock_holder), lock_holder), " +
+                    "expire_time = IF(expire_time < ? OR lock_holder = ?, VALUES(expire_time), expire_time), " +
+                    "token = IF(expire_time < ? OR lock_holder = ?, VALUES(token), token), " +
+                    "lock_count = IF(expire_time < ? OR lock_holder = ?, 1, lock_count + 1)")) {
+                
+                stmt.setString(1, lockName);
+                stmt.setString(2, clientId);
+                stmt.setLong(3, expireTime);
+                stmt.setString(4, token);
+                stmt.setLong(5, now);
+                stmt.setString(6, clientId);
+                stmt.setLong(7, now);
+                stmt.setString(8, clientId);
+                stmt.setLong(9, now);
+                stmt.setString(10, clientId);
+                stmt.setLong(11, now);
+                stmt.setString(12, clientId);
+
+                int affected = stmt.executeUpdate();
+                if (affected > 0) {
+                    // 验证锁所有权
+                    try (PreparedStatement checkStmt = connection.prepareStatement(
+                            "SELECT lock_holder, lock_count FROM global_lock_service WHERE lock_name = ?")) {
+                        checkStmt.setString(1, lockName);
+                        ResultSet rs = checkStmt.executeQuery();
+                        if (rs.next() && clientId.equals(rs.getString("lock_holder"))) {
+                            int dbCount = rs.getInt("lock_count");
+                            counterMap.put(lockName, dbCount); // 同步数据库计数器
+                            isLocked = true;
+                            startRenewTask(leaseTime, unit);
+                            connection.commit();
+                            return true;
+                        }
+                    }
+                }
+            }
+        } finally {
+            connection.setAutoCommit(true);
+        }
+        return false;
+    }
+
+    private void startRenewTask(long leaseTime, TimeUnit unit) {
+        if (renewExecutor != null) {
+            renewExecutor.shutdownNow();
+        }
+        
+        renewExecutor = Executors.newSingleThreadScheduledExecutor();
+        long renewInterval = unit.toMillis(leaseTime) / 3;
+
+        renewExecutor.scheduleAtFixedRate(() -> {
+            try {
+                renew(leaseTime, unit);
+            } catch (SQLException e) {
+                // 记录日志或触发告警
+            }
+        }, renewInterval, renewInterval, TimeUnit.MILLISECONDS);
+    }
+
+    public boolean renew(long leaseTime, TimeUnit unit) throws SQLException {
+        Map<String, Integer> counterMap = reentrantCounters.get();
+        if (!counterMap.containsKey(lockName)) {
+            return false;
+        }
+
+        long newExpireTime = System.currentTimeMillis() + unit.toMillis(leaseTime);
+        
+        try (PreparedStatement stmt = connection.prepareStatement(
+                "UPDATE global_lock_service SET expire_time = ? " +
+                "WHERE lock_name = ? AND lock_holder = ? AND token = ?")) {
+            
+            stmt.setLong(1, newExpireTime);
+            stmt.setString(2, lockName);
+            stmt.setString(3, clientId);
+            stmt.setString(4, token);
+            
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean unlock() throws SQLException {
+        Map<String, Integer> counterMap = reentrantCounters.get();
+        if (!counterMap.containsKey(lockName)) {
+            return false;
+        }
+
+        int count = counterMap.get(lockName) - 1;
+        if (count > 0) {
+            // 仅减少重入计数
+            counterMap.put(lockName, count);
+            
+            // 更新数据库计数器
+            try (PreparedStatement stmt = connection.prepareStatement(
+                    "UPDATE global_lock_service SET lock_count = ? " +
+                    "WHERE lock_name = ? AND lock_holder = ?")) {
+                stmt.setInt(1, count);
+                stmt.setString(2, lockName);
+                stmt.setString(3, clientId);
+                stmt.executeUpdate();
+            }
+            return true;
+        }
+
+        // 完全释放锁
+        counterMap.remove(lockName);
+        if (renewExecutor != null) {
+            renewExecutor.shutdownNow();
+        }
+
+        try (PreparedStatement stmt = connection.prepareStatement(
+                "DELETE FROM global_lock_service " +
+                "WHERE lock_name = ? AND lock_holder = ? AND token = ?")) {
+            
+            stmt.setString(1, lockName);
+            stmt.setString(2, clientId);
+            stmt.setString(3, token);
+            
+            int affected = stmt.executeUpdate();
+            isLocked = affected <= 0;
+            return affected > 0;
+        }
+    }
+
+    @Override
+    public void close() {
+        try {
+            unlock();
+        } catch (SQLException e) {
+            // 记录日志
+        } finally {
+            if (renewExecutor != null) {
+                renewExecutor.shutdown();
+            }
+        }
+    }
+}
+```
 
 
 
+### 1.5 分布式锁性能对比
 
-
+| 维度           | 用户级锁+心跳+ReentrantLock | 锁表+ReentrantLock | 轻量级锁 | 行锁(FOR UPDATE) |
+| -------------- | --------------------------- | ------------------ | -------- | ---------------- |
+| **实现复杂度** | ⭐⭐                          | ⭐⭐⭐                | ⭐⭐       | ⭐⭐               |
+| **跨进程互斥** | ✅                           | ✅                  | ✅        | ✅                |
+| **跨线程互斥** | ✅(结合ReentrantLock)        | ✅                  | ✅        | ✅                |
+| **可重入性**   | ✅                           | ✅                  | ❌        | ✅(事务内)        |
+| **自动释放**   | ✅(心跳检测)                 | ✅(依赖超时)        | ✅(续约)  | ✅(事务回滚)      |
+| **续约机制**   | ✅                           | ❌                  | ✅        | ✅                |
+| **死锁检测**   | ✅                           | ✅(应用层)          | ✅        | ✅(InnoDB)        |
+| **高可用支持** | ❌                           | ✅                  | ✅        | ✅                |
+| **性能开销**   | ⭐⭐                          | ⭐⭐⭐                | ⭐⭐       | ⭐⭐               |
+| **适用场景**   | 长任务                      | 复杂业务           | 通用场景 | 强一致场景       |
