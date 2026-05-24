@@ -6,7 +6,7 @@
 
 MySQL的逻辑架构总体分为两层，分别为Server层和引擎层，如下图所示：
 
-<img src="https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/mysql_architecture_opanfk.jpg" />
+![](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/mysql_architecture_opanfk.jpg)
 
 **Server层：**主要包括**连接器**、**查询缓存**、**分析器**、**优化器**、**执行器**等，可以说此层涵盖了MySQL的**大多数核心服务功能**，以及**所有的内置函数**（如日期、时间、数学和加密函数等），**所有跨存储引擎的功能**都在这一层实现，比如存储过程、触发器、视图等。
 
@@ -437,11 +437,11 @@ B+树中，每一个记录（包括数据记录和目录项记录）结构如下
 
 将记录格式示意图的其他信息项暂时去掉并把它竖起来的效果就是这样：
 
-<img src="https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/mysql_btree_cnsla.png" alt="mysql_btree_cnsla" style="zoom:80%;" />
+![mysql_btree_cnsla](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/mysql_btree_cnsla.png)
 
 把一些记录放到页里的示意图就是：
 
-<img src="https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/mysql_btree_csanklv.png" alt="mysql_btree_csanklv" style="zoom: 50%;" />
+![mysql_btree_csanklv](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/mysql_btree_csanklv.png)
 
 **①一个简单的索引设计方案**
 我们在根据某个搜索条件查找一些记录时为什么要遍历所有的数据页呢？因为各个页中的记录并没有规律，我们并不知道我们的搜索条件匹配哪些页中的记录，所以不得不依次遍历所有的数据页。
@@ -697,13 +697,13 @@ MyISAM引擎使用 B+Tree 作为索引结构，叶子节点的data域存放的�
 
 - 使用MyISAM存储引擎的表会把索引信息另外存储到一个称为**索引文件**的另一个文件中。MyISAM会单独为表的主键创建一个索引，只不过在索引的**叶子节点中存储的不是完整的用户记录**，而是主键值 +数据记录地址的组合。
 
-<img src="https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/mysql_myisam_ncksan.png" alt="mysql_myisam_ncksan" style="zoom: 25%;" />
+![mysql_myisam_ncksan](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/mysql_myisam_ncksan.png)
 
 这里设表一共有三列，假设我们以C1为主键，上图是一个MylSAM表的主索引(Primary key)示意。可以看出MylSAM的索引文件仅仅保存数据记录的地址。**在MylSAM中，主键索引和二级索引(Secondary key)在结构上没有任何区别**，只是主键索引要求key是唯一的，而二级索引的key可以重复。
 
 如果我们在C2上建立一个二级索引，则此索引的结构如下图所示：
 
-<img src="https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/mysql_myisam_xsanklos.png" alt="mysql_myisam_xsanklos" style="zoom: 25%;" />
+![mysql_myisam_xsanklos](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/mysql_myisam_xsanklos.png)
 
 同样也是一棵B+Tree，data域保存数据记录的地址。因此，MylSAM中索引检索的算法为：首先按照B+Tree搜索算法搜索索引，如果指定的Key存在，则取出其data域的值，然后以data域的值为地址，读取相应用户记录。
 

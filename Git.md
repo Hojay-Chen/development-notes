@@ -257,11 +257,11 @@ Hi Hojay-Chen! You've successfully authenticated, but GitHub does not provide sh
 
 创建好仓库后，打开IDEA，点击如下图所示的功能：
 
-<img src="https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/git_IDEA_ankjnsac.png" alt="git_IDEA_ankjnsac" style="zoom:80%;" />
+![git_IDEA_ankjnsac](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/git_IDEA_ankjnsac.png)
 
 出现如下窗口，选择git，并在下方的URL中输入仓库的网址，即可将仓库克隆到IDEA作为一个maven项目：
 
-<img src="https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/git_IDEA_cniasni.png" alt="git_IDEA_cniasni" style="zoom: 80%;" />
+![git_IDEA_cniasni](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/git_IDEA_cniasni.png)
 
 ## 3. 配置.gitignore文件
 
@@ -269,7 +269,7 @@ Hi Hojay-Chen! You've successfully authenticated, but GitHub does not provide sh
 
 在`.gitignore`中写入不需要版本控制的文件和文件夹的目录，然后可以在IDEA的commit模块（快捷键：alt+0）中将那些需要进行版本控制的文件选中，右键弹出选框并选择`Add to VCS`从而将这些文件纳入版本控制，如下图所示：
 
-<img src="https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/git_IDEA_vmkdna.png" alt="git_IDEA_vmkdna" style="zoom:80%;" />
+![git_IDEA_vmkdna](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/git_IDEA_vmkdna.png)
 
 ## 4. 在IDEA配置git服务器
 
@@ -281,13 +281,13 @@ Hi Hojay-Chen! You've successfully authenticated, but GitHub does not provide sh
 
 安装好gitee插件后，打开“File -> Settings -> Version Control -> Gitee”添加自己的Gitee账号，注意IDEA只支持用邮箱登录，如果Gitee没有绑定邮箱需要先绑定邮箱，如下图所示：
 
-<img src="https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/git_IDEA_nvjsdn.png" alt="git_IDEA_nvjsdn" style="zoom:80%;" />
+![git_IDEA_nvjsdn](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/git_IDEA_nvjsdn.png)
 
 ## 5. 在IDEA上传项目到Gitee
 
 回到IDEA的Commit模块，将所有要提交的文件选中，然后点击Commit即可上传至本地仓库，点击Commit and Push即可上传至Gitee远程仓库。
 
-<img src="https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/git_IDEA_vmkdna.png" alt="git_IDEA_vmkdna" style="zoom:80%;" />
+![git_IDEA_vmkdna](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/git_IDEA_vmkdna.png)
 
 # 五、快速入门
 

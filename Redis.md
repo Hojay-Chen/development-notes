@@ -2022,7 +2022,7 @@ Redis Cluster 采用无中心结构，Redis集群内每个节点都和其他所�
 Redis集群会将数据分散到16384 (2 ^ 14)个哈希槽中，集群中的每个节负责一定范围的哈希槽，在Redis集群中，使用CRC16哈希算法计算键的哈希槽，以确定该键应存储在哪个节点。
 集群哈希槽分片如图所标：
 
-<img src="https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_Sacnjkn.png" alt="redis_Sacnjkn" style="zoom:67%;" />
+![redis_Sacnjkn](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_Sacnjkn.png)
 
 每个节点会拥有一部分的槽位，然后对应的键值会根据其本身的key，映射到一个哈希槽中，其主要流程如下:
 
