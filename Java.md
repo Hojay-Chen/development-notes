@@ -633,7 +633,7 @@ IO，即in和out，也就是输入和输出，指应用程序和外部设备之�
 
 Java的BIO体系架构如下图所示：
 
-![IO_cnajssas](E:\各种资料\Java开发笔记\我的笔记\images\IO_cnajssas.png)
+![IO_cnajssas](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/IO_cnajssas.png)
 
 ### 2.2 File类
 
@@ -770,7 +770,7 @@ t1 等待 10 分钟后，就自动唤醒，拥有了去争夺锁的资格。
 
 ### 1.2 线程运行状态变化
 
-![thread_nvdknj](.\images\thread_nvdknj.png)
+![thread_nvdknj](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/thread_nvdknj.png)
 
 
 
@@ -946,7 +946,7 @@ public static void main(String[] args){
 
 执行结果如下图，可以看到多个线程交替执行：
 
-![thread_dsavdfg](.\images\thread_dsavdfg.png)
+![thread_dsavdfg](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/thread_dsavdfg.png)
 
 
 
@@ -1001,7 +1001,7 @@ public static void main(String[] args){
 
 执行结果如下图，可以看到多个线程交替执行：
 
-![thread_dsavdfg](.\images\thread_dsavdfg.png)
+![thread_dsavdfg](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/thread_dsavdfg.png)
 
 
 
@@ -1106,9 +1106,9 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 执行结果如下两图，可以看到多个线程交替运行，并且都有返回值：
 
-![thread_ankvsn](.\images\thread_ankvsn.png)
+![thread_ankvsn](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/thread_ankvsn.png)
 
-![thread_ahrejni](.\images\thread_ahrejni.png)
+![thread_ahrejni](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/thread_ahrejni.png)
 
 
 
@@ -1128,7 +1128,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 如下是整个Executor框架的结构图，此外，还有个Executors类作为工具类来辅助使用这套框架：
 
-![threadpool_ionvca](E:\各种资料\Java开发笔记\我的笔记\images\threadpool_ionvca.png)
+![threadpool_ionvca](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/threadpool_ionvca.png)
 
 #### 4.1.1 Executor
 
@@ -1328,7 +1328,7 @@ Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环
 >
 > ​	为了缓解CPU和内存间读写速度差异导致的性能问题，现代计算机通常在CPU和内存间添加三级缓存，越接近CPU的缓存读写越快，但存储容量越小，如下图所示。
 >
-> ![cpu_cache_njkcnad](.\images\cpu_cache_njkcnad.png)
+> ![cpu_cache_njkcnad](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/cpu_cache_njkcnad.png)
 >
 > ​	**CPU缓存的工作方式：** 先将内存数据加载到CPU缓存中，当 CPU 需要用到的时候就可以直接从CPU缓存中读取数据，当运算完成后，再将运算得到的数据写回内存中。但是，这样存在**内存缓存不一致性的问题** ！
 >
@@ -1352,7 +1352,7 @@ Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环
 
 ​	Java多线程并发执行时，每个线程会有一个本地内存，同时所有线程会共用主内存，结构如下图：
 
-![jvm_cmskaf](.\images\jvm_cmskaf.jpg)
+![jvm_cmskaf](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/jvm_cmskaf.jpg)
 
 ​	**主内存**：所有线程创建的实例对象都存放在主内存中，不管该实例对象是成员变量，还是局部变量，类信息、常量、静态变量都是放在主内存中。为了获取更好的运行速度，虚拟机及硬件系统可能会让工作内存优先存储于寄存器和高速缓存中。
 
@@ -1386,7 +1386,7 @@ Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环
 
 ​	八种同步操作是JMM的抽象描述，用于定义线程之间对共享变量的操作顺序和可见性规则。它们是JMM的逻辑模型的一部分，用于帮助程序员理解线程之间的内存交互。
 
-![jmm_cnsknv](.\images\jmm_cnsknv.png)
+![jmm_cnsknv](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/jmm_cnsknv.png)
 
 - **锁定（lock)**: 作用于主内存中的变量，将他标记为一个线程独享变量。
 
@@ -1413,7 +1413,7 @@ Java内存模型（JMM）是Java语言规范的一部分，定义了多线程环
 
 ​	JDK1.5版本中的Java内存模型中引入了Happens-Before原则。如果两个操作不满足任意一个 happens-before 规则，那么这两个操作就没有顺序的保障，JVM 可以对这两个操作进行重排序。
 
-![happens_before_sanjkvds](.\images\happens_before_sanjkvds.png)
+![happens_before_sanjkvds](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/happens_before_sanjkvds.png)
 
 - **程序次序规则**（Program Order Rule）：在**一个线程内**，按照程序代码顺序，书写在前面的操作先行发生于书写在后面的操作。准确地说，应该是控制流顺序而不是程序代码顺序，因为要考虑分支、循环等结构。
 - **管程锁定规则**（Monitor Lock Rule）：一个unlock操作先行发生于后面对**同一个锁**的lock操作。这里必须强调的是同一个锁，而“后面”是指时间上的先后顺序。
@@ -2038,7 +2038,7 @@ AQS 是一个用来构建锁和同步器的公共基础部分的抽象实现，�
 
 **AQS（AbstractQueuedSynchronizer）** 是 Java 并发包中用于构建同步器（如 ReentrantLock、Semaphore、CountDownLatch 等）的基础框架。它通过一个共享的**状态变量 `state`** 和一个基于**双向链表的等待队列**来管理线程的同步与通信。
 
-![AQS_ivnsdjo](E:\各种资料\Java开发笔记\我的笔记\images\AQS_ivnsdjo.png)
+![AQS_ivnsdjo](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/AQS_ivnsdjo.png)
 
 
 
@@ -2145,7 +2145,7 @@ static final class Node {
 
 **独占式锁**
 
-![AQS_onvoab](E:\各种资料\Java开发笔记\我的笔记\images\AQS_onvoab.png)
+![AQS_onvoab](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/AQS_onvoab.png)
 
 > **疑惑：**
 >
@@ -2163,7 +2163,7 @@ static final class Node {
 
 **独占式锁**
 
-![AQS_ocbnas](E:\各种资料\Java开发笔记\我的笔记\images\AQS_ocbnas.png)
+![AQS_ocbnas](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/AQS_ocbnas.png)
 
 - unparkSuccessor(Node node)的compareAndSetWaitStatus这个CAS的目的是：**将当前节点的 `waitStatus` 从负数（`SIGNAL`）重置为 0，表示“我已经唤醒了后继节点，后面不用你再管了”**。但是即使 `CAS` 失败了（说明其他线程可能已经修改了 `waitStatus`，比如设置为 `CANCELLED`）：
 
@@ -2212,11 +2212,11 @@ AQS 支持两种同步模式：
 
 - 对于volatile变量的写操作，JVM会在写操作前插入StoreStore屏障，使得本次写操作之前的所有写操作执行完才会执行本次写操作，保证前面的所有写操作对本次写操作的可见性；在写操作后插入StoreLoad屏障，使得本次写操作执行完才会执行之后的读操作，保证本次写操作对于后面的读操作的可见性。
 
-  ![volatile_mclnv](.\images\volatile_mclnv.jpg)
+  ![volatile_mclnv](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/volatile_mclnv.jpg)
 
 - 对于volatile变量的读操作，JVM会在读操作后插入LoadLoad屏障，使得本次读操作执行完才能只能后续的读操作，保证本次读操作对后续读操作的可见性；在读操作之后插入LoadStore屏障，保证在此次读操作执行完才能进行之后的写操作。
 
-  ![volatile_asnjc](.\images\volatile_asnjc.jpg)
+  ![volatile_asnjc](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/volatile_asnjc.jpg)
 
 这些屏障确保volatile变量的读写操作对所有线程都是可见的，并且不会发生重排序。
 
@@ -2314,7 +2314,7 @@ volatile不保证操作的原子性。
 
   上述 happens before 关系的图形化表现形式如下：
 
-  ![volatile_onacncsa](.\images\volatile_onacncsa.jpg)
+  ![volatile_onacncsa](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/volatile_onacncsa.jpg)
 
   > ## 解释
   >
@@ -2455,9 +2455,9 @@ public static Penguin getInstance() {
 
 在JDK1.6之前，synchronized底层使用的是重量级锁，在JDK1.6及以后的版本，synchronized优化出了锁升级的实现方式，有无锁、偏向锁、轻量级锁、重量级锁这几种锁状态，在JDK15废除了偏向锁机制。
 
-![synchronized_monitor_pnckas](.\images\synchronized_monitor_pnckas.png)
+![synchronized_monitor_pnckas](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/synchronized_monitor_pnckas.png)
 
-![synchronized_monitor_xpsca](.\images\synchronized_monitor_xpsca.png)
+![synchronized_monitor_xpsca](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/synchronized_monitor_xpsca.png)
 
 
 
@@ -2534,13 +2534,13 @@ HotSpot JVM在启动时，默认会延迟4秒后才启用偏向锁机制。这�
 
 当线程第一次加锁时，锁记录就去记录完整的Mark Word和锁对象指针，当线程重入加锁时，同样会生成一个锁记录，但该锁记录里面的displaced word就为null，只记录了指向锁对象的指针，而锁对象里面的ptr_to_lock_record记录的是**线程栈顶**的锁记录，如下图所示：
 
-![synchronized_lock_lnjsboa](.\images\synchronized_lock_lnjsboa.png)
+![synchronized_lock_lnjsboa](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/synchronized_lock_lnjsboa.png)
 
 当字节码解释器在执行monitorenter字节码轻度锁住一个对象时，就会在获取锁的线程的栈上显示或隐式分配一个lock record。其主要作用就是持有displaced word和锁对象的元数据，解释器可以使用lock record来检测非法的锁状态；隐式地充当重入机制的计数器。
 
 轻量级锁加锁逻辑如下图所示：
 
-![synchronized_lock_kasjbc](.\images\synchronized_lock_kasjbc.png)
+![synchronized_lock_kasjbc](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/synchronized_lock_kasjbc.png)
 
 **锁撤销**
 
@@ -2549,7 +2549,7 @@ HotSpot JVM在启动时，默认会延迟4秒后才启用偏向锁机制。这�
 - 如果没有发生竞争，那么这个复制的操作就会成功。
 - 如果有其他线程因为自旋多次导致轻量级锁升级成了重量级锁，那么`CAS`操作就会失败，此时就会释放锁并唤醒被阻塞的线程。
 
-![synchronized_lock_lanoibf](.\images\synchronized_lock_lanoibf.png)
+![synchronized_lock_lanoibf](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/synchronized_lock_lanoibf.png)
 
 
 
@@ -2569,9 +2569,9 @@ HotSpot JVM在启动时，默认会延迟4秒后才启用偏向锁机制。这�
 
   其过程可以用如下图表示：
 
-  ![synchronized_lock_noasb](.\images\synchronized_lock_noasb.jpeg)
+  ![synchronized_lock_noasb](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/synchronized_lock_noasb.jpeg)
 
-  ![synchronized_lock_aohwd](.\images\synchronized_lock_aohwd.jpeg)
+  ![synchronized_lock_aohwd](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/synchronized_lock_aohwd.jpeg)
 
 - 关闭偏向锁时，只要获取锁就会直接从无锁升级到轻量级锁。
 
@@ -2960,7 +2960,7 @@ public class AccountingSync2 implements Runnable {
 
 `ReentrantLock` 和 `AQS` 的体系架构图如下图：
 
-![AQS_omvdjsn](E:\各种资料\Java开发笔记\我的笔记\images\AQS_omvdjsn.png)
+![AQS_omvdjsn](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/AQS_omvdjsn.png)
 
 从架构图可以看到，`ReentrantLock` 有内部类 `Sync` 实现了 `AQS` 接口，但是 `ReentrantLock` 的实现并不直接依赖内部类 `Sync` ，而是在 `ReentrantLock` **内部定义了一个 `Sync` 类型属性：**
 
@@ -3147,7 +3147,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
 
 获取锁的源码结构如下：
 
-![ReentrantLock_opqnd](E:\各种资料\Java开发笔记\我的笔记\images\ReentrantLock_opqnd.png)
+![ReentrantLock_opqnd](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/ReentrantLock_opqnd.png)
 
 这里不对 `AQS` 的源码内容占用过多篇章，可跳转AQS查看AQS相关方法及其实现细节：[跳转到AQS介绍](###6.4 AQS)。
 
@@ -3155,7 +3155,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
 
 释放锁的源码结构如下：
 
-![ReentrantLock_onxsan](E:\各种资料\Java开发笔记\我的笔记\images\ReentrantLock_onxsan.png)
+![ReentrantLock_onxsan](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/ReentrantLock_onxsan.png)
 
 这里不对 `AQS` 的源码内容占用过多篇章，可跳转AQS查看AQS相关方法及其实现细节：[跳转到AQS介绍](###6.4 AQS)。
 
@@ -3173,7 +3173,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
 
 了解Java内存模型之前，需要先了解JVM内存结构（注意二者区别），JVM内存结构如下图所示，其中方法区和堆是所有线程共享，虚拟机栈、本地方法栈、程序计数器为线程私有。
 
-![jmm_dsadvnk](.\images\jmm_dsadvnk.png)
+![jmm_dsadvnk](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/jmm_dsadvnk.png)
 
 
 
@@ -3187,7 +3187,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
 
 ​	虚拟机栈是线程私有，它的生命周期与线程相同，是在JVM运行时所创建，在线程中，方法在执行的时候都会创建一个名为栈帧的数据结构，主要用于存放局部变量表、操作栈、动态链接、方法出口等信息，如下图所示，方法的调用对应着栈帧在虚拟机栈中的压栈和弹栈过程。
 
-![jvm_csanio](.\images\jvm_csanio.jpg)
+![jvm_csanio](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/jvm_csanio.jpg)
 
 #### 1.2.1 局部变量表
 
@@ -3302,7 +3302,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
 
 ​	堆内存一般会被细分为新生代和老年代，更细致的划分为Eden区、From Survivor区和To Survivor区，如下图所示。
 
-![jvm_snckas](.\images\jvm_snckas.webp)
+![jvm_snckas](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/jvm_snckas.webp)
 
 
 
@@ -3326,35 +3326,35 @@ public class ReentrantLock implements Lock, java.io.Serializable {
 
 HotSpot 虚拟机中，对象在内存中存储的布局可以分为三块区域：对象头（Header）、实例数据（Instance Data）和对齐填充（Padding）。
 
-![object_memory_xnldlk](.\images\object_memory_xnldlk.png)
+![object_memory_xnldlk](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/object_memory_xnldlk.png)
 
 #### 1.7.1 对象头
 
 HotSpot虚拟机的对象头分为两部分信息，第一部分用于存储对象自身运行时数据，如哈希码、GC分代年龄等，这部分数据的长度在32位和64位的虚拟机中分别为32位和64位。官方称为Mark Word。另一部分用于存储指向对象类型数据的指针，如果是数组对象的话，还会有一个额外的部分存储数组长度。
 
-![object_memory_papfq](.\images\object_memory_papfq.png)
+![object_memory_papfq](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/object_memory_papfq.png)
 
 先简单介绍下对象头的形式，JVM中对象头的方式有以下两种（以32位JVM为例）：
 
 普通对象：
 
-![object_memory_apqnp](.\images\object_memory_apqnp.png)
+![object_memory_apqnp](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/object_memory_apqnp.png)
 
 数组对象：
 
-![object_memory_nconajp](.\images\object_memory_nconajp.png)
+![object_memory_nconajp](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/object_memory_nconajp.png)
 
 ##### 1.7.1.1 Mark Word
 这部分主要用来存储对象自身的运行时数据，如hashcode、gc分代年龄等。mark word的位长度为JVM的一个Word大小，也就是说32位JVM的Mark word为32位，64位JVM为64位。
 为了让一个字大小存储更多的信息，JVM将字的最低两个位设置为标记位，不同标记位下的Mark Word示意如下：
 
-![object_memory_zmpbng](.\images\object_memory_zmpbng.png)
+![object_memory_zmpbng](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/object_memory_zmpbng.png)
 
 其中各部分的含义如下：
 
 - lock：2位的锁状态标记位，由于希望用尽可能少的二进制位表示尽可能多的信息，所以设置了lock标记。该标记的值不同，整个mark word表示的含义不同。
 
-![object_memory_mvjso](.\images\object_memory_mvjso.png)
+![object_memory_mvjso](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/object_memory_mvjso.png)
 
 - bias_lock：对象是否启动偏向锁标记，只占1个二进制位。为1时表示对象启动偏向锁，为0时表示对象没有偏向锁。
 

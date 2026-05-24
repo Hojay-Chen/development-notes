@@ -201,7 +201,7 @@ SpringBoot工程下，进行统一的配置管理，你想设置的任何参数�
 
 配置文件应该放置在Spring Boot工程的`src/main/resources`目录下。这是因为`src/main/resources`目录是Spring Boot默认的类路径（classpath），配置文件会被自动加载并可供应用程序访问。
 
-![springboot_ncslna](E:\各种资料\Java开发笔记\我的笔记\images\springboot_ncslna.png)
+![springboot_ncslna](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/springboot_ncslna.png)
 
 功能配置参数说明：
 
@@ -214,7 +214,7 @@ SpringBoot工程下，进行统一的配置管理，你想设置的任何参数�
 - 如果同时存在application.properties | application.yml(.yaml) , properties的优先级更高。
 - 配置基本都有默认值。
 
-    ![springboot_mpansc](E:\各种资料\Java开发笔记\我的笔记\images\springboot_mpansc.png)
+    ![springboot_mpansc](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/springboot_mpansc.png)
 
   ### 2.2 属性配置文件使用
 1. 配置文件
@@ -322,7 +322,7 @@ SpringBoot工程下，进行统一的配置管理，你想设置的任何参数�
 
 ​	浏览器访问路径，控制台查看效果
 
-![springboot_ncsab](E:\各种资料\Java开发笔记\我的笔记\images\springboot_ncsab.png)
+![springboot_ncsab](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/springboot_ncsab.png)
 
 
 

@@ -121,7 +121,7 @@ consumer.start();
 
 在整个 Apache RocketMQ 的领域模型中，主题所处的流程和位置如下：
 
-![rocketmq_xioans](E:\各种资料\Java开发笔记\我的笔记\images\rocketmq_xioans.png)
+![rocketmq_xioans](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/rocketmq_xioans.png)
 
 主题是 Apache RocketMQ 的顶层存储，所有消息资源的定义都在主题内部完成，但主题是一个逻辑概念，并不是实际的消息容器。
 
@@ -188,7 +188,7 @@ Apache RocketMQ 5.x版本支持将消息类型拆分到主题中进行独立运�
 
 在整个 Apache RocketMQ 的领域模型中，队列所处的流程和位置如下：
 
-![rocketmq_opsanc](E:\各种资料\Java开发笔记\我的笔记\images\rocketmq_opsanc.png)
+![rocketmq_opsanc](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/rocketmq_opsanc.png)
 
 Apache RocketMQ 默认提供消息可靠存储机制，**所有发送成功的消息都被持久化存储到队列中**，配合生产者和消费者客户端的调用可实现**至少投递一次的可靠性语义**。
 
@@ -235,7 +235,7 @@ Apache RocketMQ 的消息模型具备如下特点：
 
 在整个 Apache RocketMQ 的领域模型中，消息所处的流程和位置如下：
 
-![rocketmq_opsanc](E:\各种资料\Java开发笔记\我的笔记\images\rocketmq_opsanc.png)
+![rocketmq_opsanc](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/rocketmq_opsanc.png)
 
 1. 消息由生产者初始化并发送到Apache RocketMQ 服务端。
 2. 消息按照到达Apache RocketMQ 服务端的顺序存储到队列中。
@@ -346,13 +346,13 @@ Apache RocketMQ 的消息模型具备如下特点：
 
 生产者和主题的关系为多对多关系，即同一个生产者可以向多个主题发送消息，对于平台类场景如果需要发送消息到多个主题，并不需要创建多个生产者；同一个主题也可以接收多个生产者的消息，以此可以实现生产者性能的水平扩展和容灾。 
 
-![rocketmq_zajnbad](E:\各种资料\Java开发笔记\我的笔记\images\rocketmq_zajnbad.png)
+![rocketmq_zajnbad](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/rocketmq_zajnbad.png)
 
 ### 4.2 模型关系
 
 在 Apache RocketMQ 的领域模型中，生产者的位置和流程如下：
 
-![rocketmq_vkdsno](E:\各种资料\Java开发笔记\我的笔记\images\rocketmq_vkdsno.png)
+![rocketmq_vkdsno](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/rocketmq_vkdsno.png)
 
 1. 消息由生产者初始化并发送到Apache RocketMQ 服务端。
 2. 消息按照到达Apache RocketMQ 服务端的顺序存储到主题的指定队列中。
@@ -413,7 +413,7 @@ Apache RocketMQ 的消息模型具备如下特点：
 
 在 Apache RocketMQ 的领域模型中，消费者分组的位置和流程如下：
 
-![rocketmq_qldfsab](E:\各种资料\Java开发笔记\我的笔记\images\rocketmq_qldfsab.png)
+![rocketmq_qldfsab](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/rocketmq_qldfsab.png)
 
 1. 消息由生产者初始化并发送到Apache RocketMQ 服务端。
 2. 消息按照到达Apache RocketMQ 服务端的顺序存储到主题的指定队列中。
@@ -474,7 +474,7 @@ Apache RocketMQ 要求同一分组下的所有消费者以下消费行为保持�
 
 在 Apache RocketMQ 的领域模型中，消费者的位置和流程如下：
 
-![rocketmq_lcnasdsa](E:\各种资料\Java开发笔记\我的笔记\images\rocketmq_lcnasdsa.png)
+![rocketmq_lcnasdsa](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/rocketmq_lcnasdsa.png)
 
 1. 消息由生产者初始化并发送到Apache RocketMQ 服务端。
 2. 消息按照到达Apache RocketMQ 服务端的顺序存储到主题的指定队列中。
@@ -539,7 +539,7 @@ RocketMQ中每个消息拥有唯一的Messageld，且可以携带具有业务标
 
 # 四、系统架构
 
-![rocketmq_ocsnajoc](E:\各种资料\Java开发笔记\我的笔记\images\rocketmq_ocsnajoc.png)
+![rocketmq_ocsnajoc](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/rocketmq_ocsnajoc.png)
 
 ## 1. 核心架构组件
 
@@ -569,7 +569,7 @@ Broker充当着消息中转角色，负责存储消息、转发消息。Broker�
 
 Brocker Server的功能模块示意图：
 
-![rocketmq_ocnajsnc](E:\各种资料\Java开发笔记\我的笔记\images\rocketmq_ocnajsnc.png)
+![rocketmq_ocnajsnc](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/rocketmq_ocnajsnc.png)
 
 - Remoting Module：整个Broker的实体，负责处理来自clients端的请求。而这个Broker实体则由以下模块构成。
 - Client Manager：客户端管理器。负责接收、解析客户端(Producer/Consumer)请求， 管理客户端。例如，维护Consumer的Topic订阅信息。
@@ -766,7 +766,7 @@ RocketMQ的路由发现采用的是Pull模型。当Topic路由信息出现变化
 
 ## 1. 整体结构
 
-![rocketmq_lcsanmn](E:\各种资料\Java开发笔记\我的笔记\images\rocketmq_lcsanmn.png)
+![rocketmq_lcsanmn](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/rocketmq_lcsanmn.png)
 
 ### 1.1 核心模块
 
@@ -835,7 +835,7 @@ RocketMQ的路由发现采用的是Pull模型。当Topic路由信息出现变化
 
 ### 2.1 整体结构
 
-![rocketmq_mksajioc](E:\各种资料\Java开发笔记\我的笔记\images\rocketmq_mksajioc.png)
+![rocketmq_mksajioc](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/rocketmq_mksajioc.png)
 
 #### 2.1.1 核心类说明
 
@@ -1331,7 +1331,7 @@ public void start() throws Exception {
 
 #### 2.1.1 核心类说明
 
-![rocketmq_lsqmns](E:\各种资料\Java开发笔记\我的笔记\images\rocketmq_lsqmns.png)
+![rocketmq_lsqmns](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/rocketmq_lsqmns.png)
 
 | 类名                          | 功能简介                                         |
 | :---------------------------- | :----------------------------------------------- |
@@ -1367,7 +1367,7 @@ public void start() throws Exception {
 
 #### 2.1.2 包结构功能说明
 
-![rocketmq_vdnajs](E:\各种资料\Java开发笔记\我的笔记\images\rocketmq_vdnajs.png)
+![rocketmq_vdnajs](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/rocketmq_vdnajs.png)
 
 | 包名             | 功能简介                                               |
 | :--------------- | :----------------------------------------------------- |
