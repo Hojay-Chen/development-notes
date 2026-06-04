@@ -59,7 +59,7 @@
 
 - 示例：
 
-  ![uml_ocsanis](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/uml_ocsanis.png)
+  ![uml_ocsanis](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/uml_ocsanis.png)
 
 
 
@@ -78,7 +78,7 @@
 
 - 示例：
 
-  ![uml_kvanskc](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/uml_kvanskc.png)
+  ![uml_kvanskc](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/uml_kvanskc.png)
 
 
 
@@ -98,7 +98,7 @@
 
 - 示例：
 
-  ![uml_xkamscn](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/uml_xkamscn.png)
+  ![uml_xkamscn](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/uml_xkamscn.png)
 
 
 ### 3.4 组合（Composition）
@@ -117,7 +117,7 @@
 
 - 示例：
 
-  ![uml_cmlskas](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/uml_cmlskas.png)
+  ![uml_cmlskas](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/uml_cmlskas.png)
 
 
 
@@ -135,7 +135,7 @@
 
 - 示例：
 
-  ![uml_mlxajsoik](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/uml_mlxajsoik.png)
+  ![uml_mlxajsoik](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/uml_mlxajsoik.png)
 
 
 
@@ -153,7 +153,7 @@
 
 - 示例：
 
-  ![uml_mqdoias](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/uml_mqdoias.png)
+  ![uml_mqdoias](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/uml_mqdoias.png)
 
 # 三、对象图
 

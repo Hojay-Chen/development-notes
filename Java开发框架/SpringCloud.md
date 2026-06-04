@@ -34,7 +34,7 @@ sh startup.sh -m standalone
 
 看到类似如下信息即表示启动成功：
 
-![spring_cloud_nacos_nocsbajo](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/spring_cloud_nacos_nocsbajo.png)
+![spring_cloud_nacos_nocsbajo](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/spring_cloud_nacos_nocsbajo.png)
 
 
 
@@ -105,7 +105,7 @@ spring:
 
 可以进入到Nacos提供的管理页面来查看和管理客户端服务的注册情况，默认网址为：http://ip:8848/nacos/index.html，可以在Nacos服务器启动的命令行中找到，如下图即为注册成功示例：
 
-![spring_cloud_nacos_xnaoib](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/spring_cloud_nacos_xnaoib.png)
+![spring_cloud_nacos_xnaoib](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/spring_cloud_nacos_xnaoib.png)
 
 ### 2.3 配置中心
 
@@ -150,7 +150,7 @@ spring:
 
 在Nacos管理页面（上面所说的默认为http://ip:8848/nacos/index.html的网站）点击“配置管理 -> 配置列表 -> 创建配置”即可进入配置文件创建界面，Data ID填写“应用名.配置文件后缀”（如“gulimall-coupon.properties”），命名空间和Group根据业务自行选择，完成配置文件类型选择和内容填写即可创建成功。页面展示如下：
 
-![spring_cloud_nacos_gbaoa](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/spring_cloud_nacos_gbaoa.png)
+![spring_cloud_nacos_gbaoa](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/spring_cloud_nacos_gbaoa.png)
 
 #### 2.3.4 配置信息调用
 
@@ -365,4 +365,4 @@ public class Application {
 
 ## 3. 运行原理
 
-![spring_cloud_gateway_cbskja](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/spring_cloud_gateway_cbskja.png)
+![spring_cloud_gateway_cbskja](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/spring_cloud_gateway_cbskja.png)

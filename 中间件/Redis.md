@@ -59,7 +59,7 @@ struct __attribute__ ((__packed__)) sdshdr64 {
 
   比如直接存储123，则：
 
-  ![redis_string_nvodabo](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_string_nvodabo.png)
+  ![redis_string_nvodabo](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_string_nvodabo.png)
 
 - embstr编码：当字符串长度比较短（小于等于44字节），Redis会使用embstr编码，这种编码将所有的字符串相关结构体和字符串数据存放在连续的内存块中，分配内存的时候，只需要分配一次，减少内存分配和管理的开销。【
 
@@ -78,7 +78,7 @@ struct __attribute__ ((__packed__)) sdshdr64 {
   };
   ```
 
-  ![redis_string_onqbf](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_string_onqbf.png)
+  ![redis_string_onqbf](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_string_onqbf.png)
 
 - row编码：当字符串长度超过44字节时，Redis会使用raw编码，这种编码方式将结构体和实际字符串数据分开存储，以便处理更长的数据。
 
@@ -99,7 +99,7 @@ struct __attribute__ ((__packed__)) sdshdr64 {
   };
   ```
 
-  ![redis_string_qpnicna](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_string_qpnicna.png)
+  ![redis_string_qpnicna](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_string_qpnicna.png)
 
 ### 1.2 指令
 
@@ -386,7 +386,7 @@ config set hash-max-ziplist-value 2024  # 更改为2024
 >
 > 以下是Ziplist的具体结构：
 >
-> ![redis_Ziplist_obgabs](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_ziplist_obgabs.png)
+> ![redis_Ziplist_obgabs](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_ziplist_obgabs.png)
 >
 > - zlbytes: 记录整个Ziplist所占用的字节数。
 >- zltail: 记录Ziplist中最后一个节点距离Ziplist起始地址的偏移量。
@@ -396,7 +396,7 @@ config set hash-max-ziplist-value 2024  # 更改为2024
 > 
 > entry的结构如下,会记录前一个节点的长度和编码：
 >
-> ![redis_Ziplist_nonfas](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_ziplist_nonfas.png)
+> ![redis_Ziplist_nonfas](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_ziplist_nonfas.png)
 >
 > 因为entry需要记录前一个元素的大小，如果前面插入的元素很大，则已经存在的entry的pre_ entry_length字段需要变大，它一旦变大后续的节点也需要变，所以可能导致级联更新的情况，影响性能。
 >查询需按顺序遍历所有元素,逐个检查是否匹配查询条件。
@@ -409,7 +409,7 @@ config set hash-max-ziplist-value 2024  # 更改为2024
 >
 > Listpack的结构如下：
 >
-> ![redis_Listpack_zbnojabs](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_listpack_zbnojabs.png)
+> ![redis_Listpack_zbnojabs](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_listpack_zbnojabs.png)
 >
 > - header: 整个Listpack的元数据，包括总长度和总元素个数。
 >- elements: 实际存储的元素，每个元素包括长度和数据部分。
@@ -417,7 +417,7 @@ config set hash-max-ziplist-value 2024  # 更改为2024
 > 
 > element的内部结构如下：
 >
-> ![redis_Listpack_zanofdna](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_listpack_zanofdna.png)
+> ![redis_Listpack_zanofdna](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_listpack_zanofdna.png)
 >
 > - encoding-type: 元素的编码类型。
 >- element-data: 实际存放的数据。
@@ -455,7 +455,7 @@ config set hash-max-ziplist-value 2024  # 更改为2024
 > - sizemask: 这个是指哈希表大小的掩码，它的值永远等于size-1, 这个属性和哈希值一起约定了哈希节点所处的哈希表的位置,索引的值index = hash (哈希值) & sizemask。
 > - used: 表示已经使用的节点数量。
 > 
-> ![redis_hashtable_aojdq](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_hashtable_aojdq.png)
+> ![redis_hashtable_aojdq](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_hashtable_aojdq.png)
 >
 > 我们再看下哈希节点(dictEntry) 的组成，它主要由三个部分组成,分别为key、value 和指向下一个哈希节点的指针，其源码中结构体的定义如下：
 >
@@ -480,7 +480,7 @@ config set hash-max-ziplist-value 2024  # 更改为2024
 >
 > 实际上，redis的hash为了实现渐进式rehash，它的结构中包含了两个dictht，结构如下：
 >
-> ![redis_hashtable_xaosbno](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_hashtable_xaosbno.png)
+> ![redis_hashtable_xaosbno](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_hashtable_xaosbno.png)
 >
 > **渐进式rehash**
 >在平时，插入数据的时候，所有的数据都会写入ht[0]即哈希表1, ht [1]哈希表2此时就是一-张没有分配空间的空表。
@@ -662,7 +662,7 @@ QuickList结合了Ziplist和双端链表的有典，每个QuickList节点都是�
 
 
 
-![redis_quicklist_xasbnojc](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_quicklist_xasbnojc.png)
+![redis_quicklist_xasbnojc](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_quicklist_xasbnojc.png)
 
 
 
@@ -962,7 +962,7 @@ Redis中的ZSet (有序集合, Sorted Set)是底层由SkipList + hashtable或Zip
 >
 > Redis跳表的实现大致如下图所示了：
 >
-> ![redis_skiplist_znjoba](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_skiplist_znjoba.png)
+> ![redis_skiplist_znjoba](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_skiplist_znjoba.png)
 >
 > **Skiplist的功能流程**
 >
@@ -972,7 +972,7 @@ Redis中的ZSet (有序集合, Sorted Set)是底层由SkipList + hashtable或Zip
 >
 >   但如果使用跳表的话，期需要从最上面的10开始，首先跳到40，发现目标元素比40大，然后对比后一个元素比 70小。是就前往下一层进行查找，然后40的下一个50刚好符合目标，就直接返回就可以了，这个过程的跳转次数是3次，即10 -> 40 (项层) -> 40 (第二层) -> 50(第二层)，其流程如下图所标：
 >
->   ![redis_skiplist_qnivda](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_skiplist_qnivda.png)
+>   ![redis_skiplist_qnivda](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_skiplist_qnivda.png)
 >
 >   跳表的平均时间查询复杂度是0 (logn) ，最差的时间复杂度是0 (n) 。
 >
@@ -984,7 +984,7 @@ Redis中的ZSet (有序集合, Sorted Set)是底层由SkipList + hashtable或Zip
 >
 >   最终实现的效果如下图所示：
 >
->   ![redis_skiplist_zifanis](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_skiplist_zifanis.png)
+>   ![redis_skiplist_zifanis](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_skiplist_zifanis.png)
 
 
 
@@ -1459,11 +1459,11 @@ Redis 客户端可以订阅任意数量的频道。
 ## 2. Redis的发布和订阅
 客户端可以订阅频道，如下图：
 
-![redis_pubsub_xnonda](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_pubsub_xnonda.png)
+![redis_pubsub_xnonda](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_pubsub_xnonda.png)
 
 当给这个频道发布消息后，消息就会发送给订阅的客户端，如下图：
 
-![redis_pubsub_xnoas](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_pubsub_xnoas.png)
+![redis_pubsub_xnoas](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_pubsub_xnoas.png)
 
 ## 3. 发布订阅命令行实现
 （1）打开一个客户端订阅channel1
@@ -1471,20 +1471,20 @@ Redis 客户端可以订阅任意数量的频道。
 SUBSCRIBE channel1
 ```
 
-![redis_pubsub_pajsjf](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_pubsub_pajsjf.png)
+![redis_pubsub_pajsjf](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_pubsub_pajsjf.png)
 
 （2）打开另一个客户端，给channel1发布消息hello
 ```
 publish channel1 hello
 ```
 
-![redis_pubsub_nvhsjs](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_pubsub_nvhsjs.png)
+![redis_pubsub_nvhsjs](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_pubsub_nvhsjs.png)
 
 返回的1是订阅者数量
 
 （3）打开第一个客户端可以看到发送的消息
 
-![redis_pubsub_njdkd](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_pubsub_njdkd.png)
+![redis_pubsub_njdkd](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_pubsub_njdkd.png)
 
 
 
@@ -1528,7 +1528,7 @@ redis.conf文件可以配置在x秒内如果至少有y个key发生变化就会�
 
 bgsave是Redis默认的备份指令，由配置文件中进行频率配置，不会阻塞正常的读写命令。当然也可以通过指令手动触发。
 
-![redis_RDB_noknas](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_RDB_noknas.png)
+![redis_RDB_noknas](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_RDB_noknas.png)
 
 1. **检查子进程是否存在AOF/RDB的子进程正在进行**，如果有返回错误。
 
@@ -1542,11 +1542,11 @@ bgsave是Redis默认的备份指令，由配置文件中进行频率配置，不
 
    - 父进程通过`fork()`系统调用创建一个子进程，在创建子进程期间父进程是阻塞的，无法响应指令的。在`fork()`调用时，子进程会复制父进程的内存空间，但由于操作系统的写时复制（COW）机制，此时并不会真正复制内存内容，而是共享相同的物理内存页，如下图：
 
-     ![redis_RDB_cnoan](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_RDB_cnoan.png)
+     ![redis_RDB_cnoan](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_RDB_cnoan.png)
 
    - 只有当父进程或子进程对内存进行写操作时，才会触发COW机制，真正复制内存页，如下图：
 
-     ![redis_RDB_csnka](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_RDB_csnka.png)
+     ![redis_RDB_csnka](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_RDB_csnka.png)
 
 4. **子进程负责IO操作**：
 
@@ -1614,7 +1614,7 @@ appendonly yes
 
 4. Redis服务重启时，会重新load加载AOF文件中的写操作达到数据恢复的目的。
 
-![redis_aof_ksanocns](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_aof_ksanocns.png)
+![redis_aof_ksanocns](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_aof_ksanocns.png)
 
 **重写机制**
 
@@ -1630,7 +1630,7 @@ AOF重写流程：
 4. 合并新命令：当子进程完成新的AOF文件的写入后，主进程会将缓冲区中的新命令追加到新的AOF文件中，确保其包含所有最新的操作。
 5. 替换旧的AOF文件：最后，Redis使用新的AOF文件替换旧的文件，实现AOF文件的重写。
 
-![redis_aof_csnoina](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_aof_csnoina.png)
+![redis_aof_csnoina](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_aof_csnoina.png)
 
 AOF重写触发方式：
 
@@ -1651,7 +1651,7 @@ AOF重写触发方式：
 - 增量文件(incremental files) ，记录自基础文件创建以来的所有写操作，可以有多个
 - 基础文件和增量文件都会存放在一个单独的目录中, 并由一个清单文件(manifest file)进行统一跟踪和管理。当重写完后，仅需更新manifest文件，加入新的增量AOF文件和基础AOF文件，然后将之前的增量AOF文件和基础AOF文件标记为历史文件(会被异步删除)即可。更新完manifest就代表AOF写结束。
 
-![redis_aof_ioasno](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_aof_ioasno.png)
+![redis_aof_ioasno](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_aof_ioasno.png)
 
 ### 2.3 优点
 
@@ -1692,7 +1692,7 @@ RDB和AOF都有各自的缺点。如果RDB备份的频率低，那么丢的数�
 
 ### 1.1 概述
 
-![redis_xsioac](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_xsioac.jpg)
+![redis_xsioac](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_xsioac.jpg)
 
 　　单机模式顾名思义就是安装一个 Redis，启动起来，业务调用即可。例如一些简单的应用，并非必须保证高可用的情况下可以使用该模式。
 
@@ -1717,7 +1717,7 @@ RDB和AOF都有各自的缺点。如果RDB备份的频率低，那么丢的数�
 
 ### 2.1 概述
 
-![redis_csoanb](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_csoanb.jpg)
+![redis_csoanb](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_csoanb.jpg)
 
 　　Redis 的复制（Replication）功能允许用户根据一个 Redis 服务器来创建任意多个该服务器的复制品，其中被复制的服务器为主服务器（Master），而通过复制创建出来的复制品则为从服务器（Slave）。 只要主从服务器之间的网络连接正常，主服务器就会将写入自己的数据同步更新给从服务器，从而保证主从服务器的数据相同。
 
@@ -1748,7 +1748,7 @@ Redis的主从复制主要由两种数据同步方式实现，分别是全量同
 
 同步流程图：
 
-![redis_dpsan](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_dpsan.png)
+![redis_dpsan](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_dpsan.png)
 
 #### 2.2.2 增量同步
 
@@ -1779,7 +1779,7 @@ Redis的主从复制主要由两种数据同步方式实现，分别是全量同
 
 
 
-![redis_pninkcsa](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_pninkcsa.png)
+![redis_pninkcsa](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_pninkcsa.png)
 
 
 
@@ -1804,7 +1804,7 @@ Redis的主从复制主要由两种数据同步方式实现，分别是全量同
 
 ### 3.1 概述
 
-![redis_opabscs](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_opabscs.jpg)
+![redis_opabscs](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_opabscs.jpg)
 
 主从模式中，当主节点宕机之后，从节点是可以作为主节点顶上来继续提供服务，但是需要修改应用方的主节点地址，还需要命令所有从节点去复制新的主节点，整个过程**需要人工干预**。
 
@@ -2015,14 +2015,14 @@ Redis Cluster 采用无中心结构，Redis集群内每个节点都和其他所�
 
 如图所示，该集群中包含 6 个 Redis 节点，3 主 3 从，分别为 M1，M2，M3，S1，S2，S3。除了主从 Redis 节点之间进行数据复制外，所有 Redis 节点之间采用 Gossip 协议进行通信，交换维护节点元数据信息。
 
-![redis_ocbasa](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_ocbasa.png)
+![redis_ocbasa](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_ocbasa.png)
 
 #### 4.2.2 集群分片
 
 Redis集群会将数据分散到16384 (2 ^ 14)个哈希槽中，集群中的每个节负责一定范围的哈希槽，在Redis集群中，使用CRC16哈希算法计算键的哈希槽，以确定该键应存储在哪个节点。
 集群哈希槽分片如图所标：
 
-![redis_Sacnjkn](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_Sacnjkn.png)
+![redis_Sacnjkn](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_Sacnjkn.png)
 
 每个节点会拥有一部分的槽位，然后对应的键值会根据其本身的key，映射到一个哈希槽中，其主要流程如下:
 
@@ -2038,7 +2038,7 @@ Redis集群会将数据分散到16384 (2 ^ 14)个哈希槽中，集群中的每�
 > 实际上槽位信息使用一个帐度为16384位的数组来表示，节点拥有哪个槽位，就将对应位置的数据信息设置为1，否则为0.
 > 心跳数据包就包含槽位信息如下图所示:
 >
-> ![redis_mnvlan](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_mnvlan.png)
+> ![redis_mnvlan](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_mnvlan.png)
 >
 > 这里我们看到一个重点，即在消息头中最占空间的是myslots[CLUSTER_ SLOTS/8]。
 >
@@ -2081,7 +2081,7 @@ Redis集群会将数据分散到16384 (2 ^ 14)个哈希槽中，集群中的每�
 
 ### 1.1 介绍
 
-![redis_kxonas](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_kxonas.png)
+![redis_kxonas](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_kxonas.png)
 
 缓存穿透是指查询一个不存在的数据，由于缓存中肯定不存在,导致每次请求都直接访问数据库，增加数据负载。
 
@@ -2107,11 +2107,11 @@ Redis集群会将数据分散到16384 (2 ^ 14)个哈希槽中，集群中的每�
    >
    > 例如某个key通过hash-1和hash-2两个哈希函数,定位到数组中的值都为1，则说明它存在。
    >
-   > ![redis_oxnsao](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_oxnsao.png)
+   > ![redis_oxnsao](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_oxnsao.png)
    >
    > 如果布隆过滤器判断一个元素不存在集合中， 那么这个元素一定不在集合中，如果判断元素存在集合中则不一定是真的，因为哈希可能会存在冲突。因此布隆过滤器有误判的概率。
    >
-   > ![redis_cposan](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_cposan.png)
+   > ![redis_cposan](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_cposan.png)
    >
    > 且它不好删除阮素，只能新增，如果想要删除，只能重建。
    >
@@ -2283,7 +2283,7 @@ Redis集群会将数据分散到16384 (2 ^ 14)个哈希槽中，集群中的每�
 
 ### 2.1 介绍
 
-![redis_oscnan](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_oscnan.png)
+![redis_oscnan](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_oscnan.png)
 
 缓存击穿指的是某一热点数据缓存失效，使得大量请求直接打到了数据库，增加数据负载。
 
@@ -2302,7 +2302,7 @@ Redis集群会将数据分散到16384 (2 ^ 14)个哈希槽中，集群中的每�
 
 ### 3.1 介绍
 
-![redis_cosans](https://raw.githubusercontent.com/Hojay-Chen/development-notes/main/images/redis_cosans.png)
+![redis_cosans](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_cosans.png)
 
 缓存雪崩是指在某个时间点，大量缓存同时失效或被清空，导致大量请求直接打到数据库或后端系统，造成系统负载激增，甚至引发系统崩溃。这通常是由于缓存中的大量数据在同一时间失效引起的。
 
