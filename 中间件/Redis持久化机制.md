@@ -6,7 +6,7 @@ Redis 之所以这么快，一个关键原因就是**所有数据都存在内存
 
 但这就带来了一个致命问题：**内存是易失的**。一旦 Redis 进程退出、服务器宕机、或者断电，内存里的数据就会**瞬间全部丢失**。
 
-![内存数据在宕机时全部丢失](https://www.luxera.top/media/notes/images/eb6079a991e7436c8e664a790eec54d7_redis_why_persist.png)
+![内存数据在宕机时全部丢失](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_why_persist.png)
 
 > **核心痛点**：Redis 是内存数据库，宕机或重启后内存数据会全部清空。如果这些数据只是"缓存"，丢了可以从数据库回源重建；但如果 Redis 里存的是**丢不起的业务数据**——比如登录会话、购物车、计数器、排行榜、限流统计——就必须想办法把数据**持久化到磁盘**，这样重启后才能恢复。
 
@@ -27,7 +27,7 @@ RDB 的思路非常朴素：**每隔一段时间，把内存中的全量数据�
 
 可以把它类比成"**拍照/存档**"——照片拍下的那一刻，内存里有什么，快照里就有什么。之后你再怎么改数据，这张照片都不会变，直到下一次拍照。
 
-![RDB 快照写入磁盘](https://www.luxera.top/media/notes/images/5f65e3a7873a467d831e4b224e64a458_redis_rdb_snapshot.png)
+![RDB 快照写入磁盘](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_rdb_snapshot.png)
 
 ### 2.2 触发方式
 
@@ -49,7 +49,7 @@ RDB 快照不是随时都拍的，它有几种触发时机：
 
 `BGSAVE` 之所以不阻塞主进程，靠的是操作系统提供的 `fork()` 机制和**写时复制（Copy-On-Write，COW）**，流程如下：
 
-![BGSAVE fork 子进程 + 写时复制](https://www.luxera.top/media/notes/images/776b84bf8f954f05af4204101881a405_redis_rdb_bgsave.png)
+![BGSAVE fork 子进程 + 写时复制](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_rdb_bgsave.png)
 
 1. **fork 子进程**：主进程调用 `fork()` 创建子进程。子进程与父进程**共享同一份内存页表**，此时子进程看到的内存就是父进程 fork 那一刻的完整数据。
 2. **子进程写快照**：子进程按照自己看到的内存，把全量数据序列化写入 `dump.rdb`，这个过程对主进程**零打扰**。
@@ -83,7 +83,7 @@ AOF 的思路和 RDB 完全相反：**不是存"数据"，而是存"命令"**。
 
 可以类比成"**记账本**"：每一笔交易都记一笔账，将来想恢复，就把账目从头到尾重放一遍，数据就回来了。
 
-![AOF 写命令追加流程](https://www.luxera.top/media/notes/images/d807faaca9c4497e94d436ddcfdd97a1_redis_aof_append.png)
+![AOF 写命令追加流程](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_aof_append.png)
 
 **为什么记录命令，而不是像 RDB 那样记录数据？** 原因有三：
 
@@ -114,7 +114,7 @@ AOF 的写入并非"每条命令立刻落盘"，中间还隔着一层缓冲，�
 
 AOF 有个与生俱来的毛病：**文件会无限膨胀**。假设业务对同一个 key 执行了 1000 次 `INCR`，AOF 文件里就会躺着 1000 条 `INCR` 命令；文件越大，重启恢复时重放就越慢，还白占磁盘空间。
 
-![AOF 重写前后对比](https://www.luxera.top/media/notes/images/dda5fac13e704a2bae89acad035a64a5_redis_aof_rewrite.png)
+![AOF 重写前后对比](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_aof_rewrite.png)
 
 解决手段是 **AOF 重写（rewrite）**。注意，重写**不是**把旧文件改小，而是：
 
@@ -158,7 +158,7 @@ Redis 4.0 引入了**混合持久化**，配置项为 `aof-use-rdb-preamble yes`
 
 如果两种持久化都开启了，Redis 重启时会加载哪个文件？答案是**优先 AOF**：
 
-![Redis 重启加载流程](https://www.luxera.top/media/notes/images/7bcadc171ab044edb0bb28026892db10_redis_load_priority.png)
+![Redis 重启加载流程](https://raw.githubusercontent.com/Hojay-Chen/development-note-resource/main/images/redis_load_priority.png)
 
 1. Redis 启动，先检查 **AOF 是否开启且文件存在**；
 2. 若 AOF 可用，**直接加载 AOF** 恢复数据；
